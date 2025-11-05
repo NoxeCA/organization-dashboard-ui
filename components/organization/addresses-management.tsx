@@ -19,7 +19,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 export interface Address {
   id: string
   type: "billing" | "shipping"
-  label: string
   address: string
   city: string
   state: string
@@ -29,69 +28,32 @@ export interface Address {
   siteName?: string
 }
 
-const mockBillingAddresses: Address[] = [
-  {
-    id: "1",
-    type: "billing",
-    label: "Main Office Billing",
-    address: "123 Main St",
-    city: "New York",
-    state: "NY",
-    zipCode: "10001",
-    country: "USA",
-    siteId: "1",
-    siteName: "Main Office",
-  },
-  {
-    id: "2",
-    type: "billing",
-    label: "Corporate Billing",
-    address: "456 Corporate Ave",
-    city: "New York",
-    state: "NY",
-    zipCode: "10002",
-    country: "USA",
-  },
-]
+interface AddressesManagementProps {
+  billingAddresses: Address[]
+  shippingAddresses: Address[]
+  onBillingAddressesChange: (addresses: Address[]) => void
+  onShippingAddressesChange: (addresses: Address[]) => void
+  defaultBillingAddressId?: string
+  defaultShippingAddressId?: string
+  onDefaultBillingAddressChange?: (id: string) => void
+  onDefaultShippingAddressChange?: (id: string) => void
+}
 
-const mockShippingAddresses: Address[] = [
-  {
-    id: "1",
-    type: "shipping",
-    label: "Main Office Shipping",
-    address: "123 Main St",
-    city: "New York",
-    state: "NY",
-    zipCode: "10001",
-    country: "USA",
-    siteId: "1",
-    siteName: "Main Office",
-  },
-  {
-    id: "2",
-    type: "shipping",
-    label: "Warehouse Shipping",
-    address: "456 Industrial Blvd",
-    city: "Los Angeles",
-    state: "CA",
-    zipCode: "90001",
-    country: "USA",
-    siteId: "2",
-    siteName: "Warehouse West",
-  },
-]
-
-export function AddressesManagement() {
-  const [billingAddresses, setBillingAddresses] =
-    useState<Address[]>(mockBillingAddresses)
-  const [shippingAddresses, setShippingAddresses] =
-    useState<Address[]>(mockShippingAddresses)
+export function AddressesManagement({
+  billingAddresses,
+  shippingAddresses,
+  onBillingAddressesChange,
+  onShippingAddressesChange,
+  defaultBillingAddressId,
+  defaultShippingAddressId,
+  onDefaultBillingAddressChange,
+  onDefaultShippingAddressChange,
+}: AddressesManagementProps) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [addressType, setAddressType] = useState<"billing" | "shipping">("billing")
 
   const handleCreateAddress = (addressData: {
     type: "billing" | "shipping"
-    label: string
     address: string
     city: string
     state: string
@@ -105,9 +67,9 @@ export function AddressesManagement() {
     }
 
     if (addressData.type === "billing") {
-      setBillingAddresses([...billingAddresses, newAddress])
+      onBillingAddressesChange([...billingAddresses, newAddress])
     } else {
-      setShippingAddresses([...shippingAddresses, newAddress])
+      onShippingAddressesChange([...shippingAddresses, newAddress])
     }
     setIsCreateDialogOpen(false)
   }
@@ -187,7 +149,6 @@ export function AddressesManagement() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Label</TableHead>
                     <TableHead>Address</TableHead>
                     <TableHead>Site</TableHead>
                   </TableRow>
@@ -195,7 +156,7 @@ export function AddressesManagement() {
                 <TableBody>
                   {billingAddresses.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center py-8">
+                      <TableCell colSpan={2} className="text-center py-8">
                         <div className="flex flex-col items-center gap-2">
                           <CreditCard className="h-8 w-8 text-muted-foreground" />
                           <p className="text-muted-foreground">
@@ -213,17 +174,14 @@ export function AddressesManagement() {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <CreditCard className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">{address.label}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            <div>{address.address}</div>
-                            <div className="text-muted-foreground">
-                              {address.city}, {address.state} {address.zipCode}
-                            </div>
-                            <div className="text-muted-foreground">
-                              {address.country}
+                            <div className="text-sm">
+                              <div>{address.address}</div>
+                              <div className="text-muted-foreground">
+                                {address.city}, {address.state} {address.zipCode}
+                              </div>
+                              <div className="text-muted-foreground">
+                                {address.country}
+                              </div>
                             </div>
                           </div>
                         </TableCell>
@@ -266,7 +224,6 @@ export function AddressesManagement() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Label</TableHead>
                     <TableHead>Address</TableHead>
                     <TableHead>Site</TableHead>
                   </TableRow>
@@ -274,7 +231,7 @@ export function AddressesManagement() {
                 <TableBody>
                   {shippingAddresses.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center py-8">
+                      <TableCell colSpan={2} className="text-center py-8">
                         <div className="flex flex-col items-center gap-2">
                           <Package className="h-8 w-8 text-muted-foreground" />
                           <p className="text-muted-foreground">
@@ -292,17 +249,14 @@ export function AddressesManagement() {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Package className="h-4 w-4 text-muted-foreground" />
-                            <span className="font-medium">{address.label}</span>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            <div>{address.address}</div>
-                            <div className="text-muted-foreground">
-                              {address.city}, {address.state} {address.zipCode}
-                            </div>
-                            <div className="text-muted-foreground">
-                              {address.country}
+                            <div className="text-sm">
+                              <div>{address.address}</div>
+                              <div className="text-muted-foreground">
+                                {address.city}, {address.state} {address.zipCode}
+                              </div>
+                              <div className="text-muted-foreground">
+                                {address.country}
+                              </div>
                             </div>
                           </div>
                         </TableCell>

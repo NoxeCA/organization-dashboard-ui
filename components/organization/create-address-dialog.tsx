@@ -32,13 +32,11 @@ import {
 } from "@/components/ui/select"
 
 const createAddressSchema = z.object({
-  label: z.string().min(1, "Label is required"),
   address: z.string().min(1, "Address is required"),
   city: z.string().min(1, "City is required"),
   state: z.string().min(1, "State is required"),
   zipCode: z.string().min(1, "Zip code is required"),
   country: z.string().min(1, "Country is required"),
-  siteId: z.string().optional(),
 })
 
 type CreateAddressFormValues = z.infer<typeof createAddressSchema>
@@ -51,12 +49,6 @@ interface CreateAddressDialogProps {
   children?: React.ReactNode
 }
 
-// Mock sites for selection
-const mockSites = [
-  { id: "1", name: "Main Office" },
-  { id: "2", name: "Warehouse West" },
-]
-
 export function CreateAddressDialog({
   open,
   onOpenChange,
@@ -67,13 +59,11 @@ export function CreateAddressDialog({
   const form = useForm<CreateAddressFormValues>({
     resolver: zodResolver(createAddressSchema),
     defaultValues: {
-      label: "",
       address: "",
       city: "",
       state: "",
       zipCode: "",
       country: "USA",
-      siteId: undefined,
     },
   })
 
@@ -92,65 +82,11 @@ export function CreateAddressDialog({
           <DialogTitle>Create {addressTypeLabel} Address</DialogTitle>
           <DialogDescription>
             Add a new {addressTypeLabel.toLowerCase()} address to your
-            organization. You can optionally link it to a site.
+            organization.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="label"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Label</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder={`${addressTypeLabel} Address Name`}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    A friendly name to identify this address
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="siteId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Link to Site (Optional)</FormLabel>
-                  <Select
-                    onValueChange={(value) => {
-                      field.onChange(value === "none" ? undefined : value)
-                    }}
-                    value={field.value || "none"}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a site (optional)" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="none">None</SelectItem>
-                      {mockSites.map((site) => (
-                        <SelectItem key={site.id} value={site.id}>
-                          {site.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    Optionally link this address to a specific site
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             <FormField
               control={form.control}
               name="address"

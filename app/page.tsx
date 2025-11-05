@@ -1,46 +1,21 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { MembersManagement } from "@/components/organization/members-management"
 import { SitesManagement } from "@/components/organization/sites-management"
 import { AddressesManagement } from "@/components/organization/addresses-management"
-import { RatesManagement } from "@/components/organization/rates-management"
+import { RatesManagement, mockRates } from "@/components/organization/rates-management"
 import { RolesManagement } from "@/components/organization/roles-management"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CustomerHeader, type CustomerInfo } from "@/components/organization/customer-header"
 import { ThemeToggle } from "@/components/theme-toggle"
+import { mockSites, mockMembers } from "@/lib/mock-data"
 import type { Site } from "@/components/organization/sites-management"
-import type { Member } from "@/components/organization/members-management"
-import { useMemo } from "react"
+import type { Address } from "@/components/organization/addresses-management"
 
 // Available roles - In a real app, this would come from your API/database
 const availableRoles = ["Owner", "Manager", "Viewer", "Operator"]
-
-const initialSites: Site[] = [
-  {
-    id: "1",
-    name: "Main Office",
-    address: "123 Main St",
-    city: "New York",
-    state: "NY",
-    zipCode: "10001",
-    country: "USA",
-    billingAddress: "123 Main St, New York, NY 10001",
-    shippingAddress: "123 Main St, New York, NY 10001",
-  },
-  {
-    id: "2",
-    name: "Warehouse West",
-    address: "456 Industrial Blvd",
-    city: "Los Angeles",
-    state: "CA",
-    zipCode: "90001",
-    country: "USA",
-    billingAddress: "123 Main St, New York, NY 10001",
-    shippingAddress: "456 Industrial Blvd, Los Angeles, CA 90001",
-  },
-]
 
 // Mock customer data - In a real app, this would come from your API/database
 const customerData: CustomerInfo = {
@@ -53,36 +28,65 @@ const customerData: CustomerInfo = {
   membership: "premium tier 2",
 }
 
+// Mock addresses - In a real app, this would come from your API/database
+const mockBillingAddresses: Address[] = [
+  {
+    id: "1",
+    type: "billing",
+    address: "123 Main St",
+    city: "New York",
+    state: "NY",
+    zipCode: "10001",
+    country: "USA",
+    siteId: "1",
+    siteName: "Main Office",
+  },
+  {
+    id: "2",
+    type: "billing",
+    address: "123 Main St",
+    city: "New York",
+    state: "NY",
+    zipCode: "10001",
+    country: "USA",
+    siteId: "2",
+    siteName: "Warehouse West",
+  },
+]
+
+const mockShippingAddresses: Address[] = [
+  {
+    id: "1",
+    type: "shipping",
+    address: "123 Main St",
+    city: "New York",
+    state: "NY",
+    zipCode: "10001",
+    country: "USA",
+    siteId: "1",
+    siteName: "Main Office",
+  },
+  {
+    id: "2",
+    type: "shipping",
+    address: "456 Industrial Blvd",
+    city: "Los Angeles",
+    state: "CA",
+    zipCode: "90001",
+    country: "USA",
+    siteId: "2",
+    siteName: "Warehouse West",
+  },
+]
+
 export default function Home() {
-  const [sites, setSites] = useState<Site[]>(initialSites)
+  const [sites, setSites] = useState<Site[]>(mockSites)
+  const [billingAddresses, setBillingAddresses] = useState<Address[]>(mockBillingAddresses)
+  const [shippingAddresses, setShippingAddresses] = useState<Address[]>(mockShippingAddresses)
   
-  // Mock members data - In a real app, this would come from your API/database
-  const mockMembers: Member[] = [
-    {
-      id: "1",
-      name: "John Doe",
-      email: "john.doe@example.com",
-      role: "Owner",
-      status: "active",
-      siteIds: ["1", "2"],
-    },
-    {
-      id: "2",
-      name: "Jane Smith",
-      email: "jane.smith@example.com",
-      role: "Manager",
-      status: "active",
-      siteIds: ["1"],
-    },
-    {
-      id: "3",
-      name: "Bob Johnson",
-      email: "bob.johnson@example.com",
-      role: "Operator",
-      status: "pending",
-      siteIds: [],
-    },
-  ]
+  // Organization-level default addresses
+  const [defaultBillingAddressId, setDefaultBillingAddressId] = useState<string>("1")
+  const [defaultShippingAddressId, setDefaultShippingAddressId] = useState<string>("1")
 
   // Calculate member counts per role
   const memberCounts = useMemo(() => {
@@ -128,10 +132,28 @@ export default function Home() {
                 <RolesManagement memberCounts={memberCounts} />
               </TabsContent>
               <TabsContent value="sites" className="mt-6">
-                <SitesManagement sites={sites} onSitesChange={setSites} />
+                <SitesManagement 
+                  sites={sites} 
+                  onSitesChange={setSites}
+                  members={mockMembers}
+                  organizationRates={mockRates}
+                  billingAddresses={billingAddresses}
+                  shippingAddresses={shippingAddresses}
+                  defaultBillingAddressId={defaultBillingAddressId}
+                  defaultShippingAddressId={defaultShippingAddressId}
+                />
               </TabsContent>
               <TabsContent value="addresses" className="mt-6">
-                <AddressesManagement />
+                <AddressesManagement 
+                  billingAddresses={billingAddresses}
+                  shippingAddresses={shippingAddresses}
+                  onBillingAddressesChange={setBillingAddresses}
+                  onShippingAddressesChange={setShippingAddresses}
+                  defaultBillingAddressId={defaultBillingAddressId}
+                  defaultShippingAddressId={defaultShippingAddressId}
+                  onDefaultBillingAddressChange={setDefaultBillingAddressId}
+                  onDefaultShippingAddressChange={setDefaultShippingAddressId}
+                />
               </TabsContent>
               <TabsContent value="rates" className="mt-6">
                 <RatesManagement />
