@@ -111,7 +111,13 @@ export default function Home() {
             <Link href="/onboarding">
               <Button variant="outline" size="sm" className="gap-2">
                 <Sparkles className="h-4 w-4" />
-                Try Onboarding Demo
+                Customer Onboarding
+              </Button>
+            </Link>
+            <Link href="/onboarding/internal">
+              <Button variant="outline" size="sm" className="gap-2">
+                <Sparkles className="h-4 w-4" />
+                Internal Onboarding
               </Button>
             </Link>
             <ThemeToggle />
