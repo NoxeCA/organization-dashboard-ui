@@ -13,6 +13,9 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { mockSites, mockMembers } from "@/lib/mock-data"
 import type { Site } from "@/components/organization/sites-management"
 import type { Address } from "@/components/organization/addresses-management"
+import { Button } from "@/components/ui/button"
+import { Sparkles } from "lucide-react"
+import Link from "next/link"
 
 // Available roles - In a real app, this would come from your API/database
 const availableRoles = ["Owner", "Manager", "Viewer", "Operator"]
@@ -104,7 +107,13 @@ export default function Home() {
           <div className="flex-1">
             <CustomerHeader customer={customerData} />
           </div>
-          <div className="pt-2">
+          <div className="flex items-center gap-2 pt-2">
+            <Link href="/onboarding">
+              <Button variant="outline" size="sm" className="gap-2">
+                <Sparkles className="h-4 w-4" />
+                Try Onboarding Demo
+              </Button>
+            </Link>
             <ThemeToggle />
           </div>
         </div>
