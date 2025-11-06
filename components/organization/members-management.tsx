@@ -24,6 +24,7 @@ export interface Member {
   id: string
   name: string
   email: string
+  position?: string
   role: string
   status: "active" | "pending" | "inactive"
   avatar?: string
@@ -35,6 +36,7 @@ const mockMembers: Member[] = [
     id: "1",
     name: "John Doe",
     email: "john.doe@example.com",
+    position: "CEO",
     role: "Owner",
     status: "active",
     siteIds: ["1", "2"],
@@ -43,6 +45,7 @@ const mockMembers: Member[] = [
     id: "2",
     name: "Jane Smith",
     email: "jane.smith@example.com",
+    position: "Operations Manager",
     role: "Manager",
     status: "active",
     siteIds: ["1"],
@@ -51,6 +54,7 @@ const mockMembers: Member[] = [
     id: "3",
     name: "Bob Johnson",
     email: "bob.johnson@example.com",
+    position: "Field Technician",
     role: "Operator",
     status: "pending",
     siteIds: [],
@@ -69,11 +73,12 @@ export function MembersManagement({ sites, availableRoles }: MembersManagementPr
   const [isManageSitesDialogOpen, setIsManageSitesDialogOpen] = useState(false)
   const [isEditRoleDialogOpen, setIsEditRoleDialogOpen] = useState(false)
 
-  const handleInviteMember = (memberData: { email: string; role: string; siteIds?: string[] }) => {
+  const handleInviteMember = (memberData: { email: string; position?: string; role: string; siteIds?: string[] }) => {
     const newMember: Member = {
       id: Date.now().toString(),
       name: memberData.email.split("@")[0],
       email: memberData.email,
+      position: memberData.position,
       role: memberData.role,
       status: "pending",
       siteIds: memberData.siteIds || [],
@@ -95,15 +100,15 @@ export function MembersManagement({ sites, availableRoles }: MembersManagementPr
     )
   }
 
-  const handleEditRole = (member: Member) => {
+  const handleEditMember = (member: Member) => {
     setSelectedMember(member)
     setIsEditRoleDialogOpen(true)
   }
 
-  const handleSaveRoleChange = (memberId: string, newRole: string) => {
+  const handleSaveMemberChange = (memberId: string, updates: { role?: string; position?: string; status?: "active" | "inactive" }) => {
     setMembers((prev) =>
       prev.map((member) =>
-        member.id === memberId ? { ...member, role: newRole } : member
+        member.id === memberId ? { ...member, ...updates } : member
       )
     )
   }
@@ -172,7 +177,7 @@ export function MembersManagement({ sites, availableRoles }: MembersManagementPr
         onOpenChange={setIsEditRoleDialogOpen}
         member={selectedMember}
         availableRoles={availableRoles}
-        onSave={handleSaveRoleChange}
+        onSave={handleSaveMemberChange}
       />
 
       <Card>
@@ -188,6 +193,7 @@ export function MembersManagement({ sites, availableRoles }: MembersManagementPr
               <TableRow>
                 <TableHead>Member</TableHead>
                 <TableHead>Email</TableHead>
+                <TableHead>Position</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Assigned Sites</TableHead>
                 <TableHead>Status</TableHead>
@@ -197,7 +203,7 @@ export function MembersManagement({ sites, availableRoles }: MembersManagementPr
             <TableBody>
               {members.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
+                  <TableCell colSpan={7} className="text-center py-8">
                     <div className="flex flex-col items-center gap-2">
                       <User className="h-8 w-8 text-muted-foreground" />
                       <p className="text-muted-foreground">No members yet</p>
@@ -225,6 +231,11 @@ export function MembersManagement({ sites, availableRoles }: MembersManagementPr
                           <Mail className="h-4 w-4 text-muted-foreground" />
                           {member.email}
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        {member.position || (
+                          <span className="text-muted-foreground text-sm">—</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary">{member.role}</Badge>
@@ -263,10 +274,10 @@ export function MembersManagement({ sites, availableRoles }: MembersManagementPr
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
-                              onClick={() => handleEditRole(member)}
+                              onClick={() => handleEditMember(member)}
                             >
                               <UserCog className="mr-2 h-4 w-4" />
-                              Edit Role
+                              Edit Member
                             </DropdownMenuItem>
                             <DropdownMenuItem
                               onClick={() => handleManageSites(member)}

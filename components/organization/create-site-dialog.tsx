@@ -32,9 +32,9 @@ import {
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useState, useEffect } from "react"
-import { AlertTriangle } from "lucide-react"
+import { Info, CreditCard, Package } from "lucide-react"
 import type { Site } from "./sites-management"
 import type { Address } from "./addresses-management"
 
@@ -75,7 +75,7 @@ interface CreateSiteDialogProps {
   defaultShippingAddressId: string
 }
 
-type AddressOption = "default" | "existing" | "new"
+type AddressOption = "keep-current" | "default" | "existing" | "new"
 
 export function CreateSiteDialog({
   open,
@@ -120,19 +120,9 @@ export function CreateSiteDialog({
   // Prefill form when editing
   useEffect(() => {
     if (site && open) {
-      const currentBillingOption = site.billingAddressId
-        ? site.billingAddressId === defaultBillingAddressId
-          ? "default"
-          : "existing"
-        : "new"
-      const currentShippingOption = site.shippingAddressId
-        ? site.shippingAddressId === defaultShippingAddressId
-          ? "default"
-          : "existing"
-        : "new"
-
-      setBillingOption(currentBillingOption)
-      setShippingOption(currentShippingOption)
+      // When editing, default to "keep-current" - don't push user to change addresses
+      setBillingOption("keep-current")
+      setShippingOption("keep-current")
 
       form.reset({
         name: site.name,
@@ -182,8 +172,14 @@ export function CreateSiteDialog({
   }, [site, open, form, defaultBillingAddressId, defaultShippingAddressId])
 
   const onSubmit = (data: CreateSiteFormValues) => {
-    // Validate new address fields if "new" option is selected
-    if (billingOption === "new") {
+    // Handle billing address based on selected option
+    if (billingOption === "keep-current") {
+      // Keep the existing address - use current site's billingAddressId
+      if (site?.billingAddressId) {
+        data.billingAddressId = site.billingAddressId
+      }
+      // If no addressId, the billing address string stays as-is
+    } else if (billingOption === "new") {
       if (!data.newBillingAddress || !data.newBillingCity || !data.newBillingState || !data.newBillingZipCode || !data.newBillingCountry) {
         form.setError("newBillingAddress", { message: "All billing address fields are required when creating a new address" })
         return
@@ -194,7 +190,14 @@ export function CreateSiteDialog({
     }
     // else billingOption === "existing" - billingAddressId is already set from form
 
-    if (shippingOption === "new") {
+    // Handle shipping address based on selected option
+    if (shippingOption === "keep-current") {
+      // Keep the existing address - use current site's shippingAddressId
+      if (site?.shippingAddressId) {
+        data.shippingAddressId = site.shippingAddressId
+      }
+      // If no addressId, the shipping address string stays as-is
+    } else if (shippingOption === "new") {
       if (!data.newShippingAddress || !data.newShippingCity || !data.newShippingState || !data.newShippingZipCode || !data.newShippingCountry) {
         form.setError("newShippingAddress", { message: "All shipping address fields are required when creating a new address" })
         return
@@ -209,8 +212,7 @@ export function CreateSiteDialog({
       onUpdate(site.id, data)
     } else {
       onCreate(data)
-    }
-    if (!isEditMode) {
+      // Reset form after creating new site
       form.reset()
       setBillingOption("default")
       setShippingOption("default")
@@ -328,14 +330,10 @@ export function CreateSiteDialog({
             <Separator />
 
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Billing Address</h3>
-              
-              {isEditMode && site?.billingAddress && (
-                <div className="p-3 rounded-lg bg-muted/50 border border-border">
-                  <p className="text-xs font-medium text-muted-foreground mb-1">Current Billing Address</p>
-                  <p className="text-sm">{site.billingAddress}</p>
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-5 w-5 text-muted-foreground" />
+                <h3 className="text-sm font-semibold">Billing Address</h3>
+              </div>
 
               <RadioGroup
                 value={billingOption}
@@ -347,156 +345,181 @@ export function CreateSiteDialog({
                     form.setValue("billingAddressId", billingAddresses[0].id)
                   }
                 }}
+                className="space-y-3"
               >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="default" id="billing-default" />
-                  <label htmlFor="billing-default" className="text-sm font-medium cursor-pointer">
-                    Use default address
-                  </label>
-                </div>
-                {billingOption === "default" && defaultBillingAddress && (
-                  <div className="ml-6 mb-2">
-                    <Alert variant="destructive">
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertTitle>Warning</AlertTitle>
-                      <AlertDescription>
-                        This site will use the organization's default billing address: {formatAddress(defaultBillingAddress)}
-                      </AlertDescription>
-                    </Alert>
+                {/* Keep Current Address Option (only shown when editing) */}
+                {isEditMode && site?.billingAddress && (
+                  <div className="space-y-2">
+                    <div className="flex items-start space-x-2">
+                      <RadioGroupItem value="keep-current" id="billing-keep-current" className="mt-1" />
+                      <div className="flex-1">
+                        <label htmlFor="billing-keep-current" className="text-sm font-medium cursor-pointer leading-none">
+                          Keep current address
+                        </label>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {site.billingAddress}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
 
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="existing" id="billing-existing" />
-                  <label htmlFor="billing-existing" className="text-sm font-medium cursor-pointer">
-                    Use existing address
-                  </label>
-                </div>
-                {billingOption === "existing" && (
-                  <div className="ml-6">
-                    <FormField
-                      control={form.control}
-                      name="billingAddressId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Select Billing Address</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select an address" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {billingAddresses.map((addr) => (
-                                <SelectItem key={addr.id} value={addr.id}>
-                                  {formatAddress(addr)}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
+                <div className="space-y-2">
+                  <div className="flex items-start space-x-2">
+                    <RadioGroupItem value="default" id="billing-default" className="mt-1" />
+                    <div className="flex-1">
+                      <label htmlFor="billing-default" className="text-sm font-medium cursor-pointer leading-none">
+                        Use organization's default address
+                      </label>
+                      {defaultBillingAddress && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {formatAddress(defaultBillingAddress)}
+                        </p>
                       )}
-                    />
+                    </div>
                   </div>
-                )}
-
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="new" id="billing-new" />
-                  <label htmlFor="billing-new" className="text-sm font-medium cursor-pointer">
-                    Create new address
-                  </label>
+                  {billingOption === "default" && defaultBillingAddress && (
+                    <div className="ml-6 mt-2">
+                      <Alert>
+                        <Info className="h-4 w-4" />
+                        <AlertDescription className="text-xs">
+                          Changes to the organization's default address will automatically apply to this site.
+                        </AlertDescription>
+                      </Alert>
+                    </div>
+                  )}
                 </div>
-                {billingOption === "new" && (
-                  <div className="ml-6 space-y-4 border-l-2 pl-4">
-                    <FormField
-                      control={form.control}
-                      name="newBillingAddress"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Street Address</FormLabel>
-                          <FormControl>
-                            <Input placeholder="123 Main St" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <div className="grid grid-cols-2 gap-4">
+
+                <div className="space-y-2">
+                  <div className="flex items-start space-x-2">
+                    <RadioGroupItem value="existing" id="billing-existing" className="mt-1" />
+                    <label htmlFor="billing-existing" className="text-sm font-medium cursor-pointer leading-none">
+                      Select an existing address
+                    </label>
+                  </div>
+                  {billingOption === "existing" && (
+                    <div className="ml-6 mt-2">
                       <FormField
                         control={form.control}
-                        name="newBillingCity"
+                        name="billingAddressId"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>City</FormLabel>
-                            <FormControl>
-                              <Input placeholder="New York" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="newBillingState"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>State</FormLabel>
-                            <FormControl>
-                              <Input placeholder="NY" {...field} />
-                            </FormControl>
+                            <Select
+                              onValueChange={field.onChange}
+                              value={field.value}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="w-full">
+                                  <SelectValue placeholder="Choose an address" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {billingAddresses.map((addr) => (
+                                  <SelectItem key={addr.id} value={addr.id}>
+                                    {formatAddress(addr)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="newBillingZipCode"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Zip Code</FormLabel>
-                            <FormControl>
-                              <Input placeholder="10001" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="newBillingCountry"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Country</FormLabel>
-                            <FormControl>
-                              <Input placeholder="USA" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-start space-x-2">
+                    <RadioGroupItem value="new" id="billing-new" className="mt-1" />
+                    <label htmlFor="billing-new" className="text-sm font-medium cursor-pointer leading-none">
+                      Create a new address
+                    </label>
                   </div>
-                )}
+                  {billingOption === "new" && (
+                    <div className="ml-6 mt-2 space-y-3 p-4 rounded-lg bg-muted/30 border border-dashed">
+                      <FormField
+                        control={form.control}
+                        name="newBillingAddress"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs">Street Address</FormLabel>
+                            <FormControl>
+                              <Input placeholder="123 Main St" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="grid grid-cols-2 gap-3">
+                        <FormField
+                          control={form.control}
+                          name="newBillingCity"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs">City</FormLabel>
+                              <FormControl>
+                                <Input placeholder="New York" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="newBillingState"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs">State</FormLabel>
+                              <FormControl>
+                                <Input placeholder="NY" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <FormField
+                          control={form.control}
+                          name="newBillingZipCode"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs">Zip Code</FormLabel>
+                              <FormControl>
+                                <Input placeholder="10001" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="newBillingCountry"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs">Country</FormLabel>
+                              <FormControl>
+                                <Input placeholder="USA" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </RadioGroup>
             </div>
 
             <Separator />
 
             <div className="space-y-4">
-              <h3 className="text-sm font-semibold">Shipping Address</h3>
-              
-              {isEditMode && site?.shippingAddress && (
-                <div className="p-3 rounded-lg bg-muted/50 border border-border">
-                  <p className="text-xs font-medium text-muted-foreground mb-1">Current Shipping Address</p>
-                  <p className="text-sm">{site.shippingAddress}</p>
-                </div>
-              )}
+              <div className="flex items-center gap-2">
+                <Package className="h-5 w-5 text-muted-foreground" />
+                <h3 className="text-sm font-semibold">Shipping Address</h3>
+              </div>
 
               <RadioGroup
                 value={shippingOption}
@@ -508,143 +531,172 @@ export function CreateSiteDialog({
                     form.setValue("shippingAddressId", shippingAddresses[0].id)
                   }
                 }}
+                className="space-y-3"
               >
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="default" id="shipping-default" />
-                  <label htmlFor="shipping-default" className="text-sm font-medium cursor-pointer">
-                    Use default address
-                  </label>
-                </div>
-                {shippingOption === "default" && defaultShippingAddress && (
-                  <div className="ml-6 mb-2">
-                    <Alert variant="destructive">
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertTitle>Warning</AlertTitle>
-                      <AlertDescription>
-                        This site will use the organization's default shipping address: {formatAddress(defaultShippingAddress)}
-                      </AlertDescription>
-                    </Alert>
-                  </div>
-                )}
-
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="existing" id="shipping-existing" />
-                  <label htmlFor="shipping-existing" className="text-sm font-medium cursor-pointer">
-                    Use existing address
-                  </label>
-                </div>
-                {shippingOption === "existing" && (
-                  <div className="ml-6">
-                    <FormField
-                      control={form.control}
-                      name="shippingAddressId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Select Shipping Address</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            value={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select an address" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {shippingAddresses.map((addr) => (
-                                <SelectItem key={addr.id} value={addr.id}>
-                                  {formatAddress(addr)}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                )}
-
-                <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="new" id="shipping-new" />
-                  <label htmlFor="shipping-new" className="text-sm font-medium cursor-pointer">
-                    Create new address
-                  </label>
-                </div>
-                {shippingOption === "new" && (
-                  <div className="ml-6 space-y-4 border-l-2 pl-4">
-                    <FormField
-                      control={form.control}
-                      name="newShippingAddress"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Street Address</FormLabel>
-                          <FormControl>
-                            <Input placeholder="123 Main St" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="newShippingCity"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>City</FormLabel>
-                            <FormControl>
-                              <Input placeholder="New York" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="newShippingState"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>State</FormLabel>
-                            <FormControl>
-                              <Input placeholder="NY" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                  {/* Keep Current Address Option (only shown when editing) */}
+                  {isEditMode && site?.shippingAddress && (
+                    <div className="space-y-2">
+                      <div className="flex items-start space-x-2">
+                        <RadioGroupItem value="keep-current" id="shipping-keep-current" className="mt-1" />
+                        <div className="flex-1">
+                          <label htmlFor="shipping-keep-current" className="text-sm font-medium cursor-pointer leading-none">
+                            Keep current address
+                          </label>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {site.shippingAddress}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="newShippingZipCode"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Zip Code</FormLabel>
-                            <FormControl>
-                              <Input placeholder="10001" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
+                  )}
+
+                  <div className="space-y-2">
+                    <div className="flex items-start space-x-2">
+                      <RadioGroupItem value="default" id="shipping-default" className="mt-1" />
+                      <div className="flex-1">
+                        <label htmlFor="shipping-default" className="text-sm font-medium cursor-pointer leading-none">
+                          Use organization's default address
+                        </label>
+                        {defaultShippingAddress && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {formatAddress(defaultShippingAddress)}
+                          </p>
                         )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="newShippingCountry"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Country</FormLabel>
-                            <FormControl>
-                              <Input placeholder="USA" {...field} />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      </div>
                     </div>
+                    {shippingOption === "default" && defaultShippingAddress && (
+                      <div className="ml-6 mt-2">
+                        <Alert>
+                          <Info className="h-4 w-4" />
+                          <AlertDescription className="text-xs">
+                            Changes to the organization's default address will automatically apply to this site.
+                          </AlertDescription>
+                        </Alert>
+                      </div>
+                    )}
                   </div>
-                )}
-              </RadioGroup>
+
+                  <div className="space-y-2">
+                    <div className="flex items-start space-x-2">
+                      <RadioGroupItem value="existing" id="shipping-existing" className="mt-1" />
+                      <label htmlFor="shipping-existing" className="text-sm font-medium cursor-pointer leading-none">
+                        Select an existing address
+                      </label>
+                    </div>
+                    {shippingOption === "existing" && (
+                      <div className="ml-6 mt-2">
+                        <FormField
+                          control={form.control}
+                          name="shippingAddressId"
+                          render={({ field }) => (
+                            <FormItem>
+                              <Select
+                                onValueChange={field.onChange}
+                                value={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger className="w-full">
+                                    <SelectValue placeholder="Choose an address" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  {shippingAddresses.map((addr) => (
+                                    <SelectItem key={addr.id} value={addr.id}>
+                                      {formatAddress(addr)}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-start space-x-2">
+                      <RadioGroupItem value="new" id="shipping-new" className="mt-1" />
+                      <label htmlFor="shipping-new" className="text-sm font-medium cursor-pointer leading-none">
+                        Create a new address
+                      </label>
+                    </div>
+                    {shippingOption === "new" && (
+                      <div className="ml-6 mt-2 space-y-3 p-4 rounded-lg bg-muted/30 border border-dashed">
+                        <FormField
+                          control={form.control}
+                          name="newShippingAddress"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-xs">Street Address</FormLabel>
+                              <FormControl>
+                                <Input placeholder="123 Main St" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <div className="grid grid-cols-2 gap-3">
+                          <FormField
+                            control={form.control}
+                            name="newShippingCity"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs">City</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="New York" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="newShippingState"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs">State</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="NY" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <FormField
+                            control={form.control}
+                            name="newShippingZipCode"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs">Zip Code</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="10001" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="newShippingCountry"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs">Country</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="USA" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </RadioGroup>
             </div>
 
             <DialogFooter>
@@ -653,8 +705,14 @@ export function CreateSiteDialog({
                 variant="outline"
                 onClick={() => {
                   form.reset()
-                  setBillingOption("default")
-                  setShippingOption("default")
+                  // Reset to appropriate defaults based on mode
+                  if (isEditMode) {
+                    setBillingOption("keep-current")
+                    setShippingOption("keep-current")
+                  } else {
+                    setBillingOption("default")
+                    setShippingOption("default")
+                  }
                   onOpenChange?.(false)
                 }}
               >

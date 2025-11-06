@@ -26,24 +26,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import type { Member } from "./members-management"
 
-const editRoleSchema = z.object({
+const editMemberSchema = z.object({
+  position: z.string().optional(),
   role: z.string().min(1, "Please select a role"),
+  status: z.enum(["active", "inactive"]),
 })
 
-type EditRoleFormValues = z.infer<typeof editRoleSchema>
+type EditMemberFormValues = z.infer<typeof editMemberSchema>
 
 interface EditMemberRoleDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   member: Member | null
   availableRoles: string[]
-  onSave: (memberId: string, newRole: string) => void
+  onSave: (memberId: string, updates: { role?: string; position?: string; status?: "active" | "inactive" }) => void
 }
 
 export function EditMemberRoleDialog({
@@ -53,23 +56,35 @@ export function EditMemberRoleDialog({
   availableRoles,
   onSave,
 }: EditMemberRoleDialogProps) {
-  const form = useForm<EditRoleFormValues>({
-    resolver: zodResolver(editRoleSchema),
+  const form = useForm<EditMemberFormValues>({
+    resolver: zodResolver(editMemberSchema),
     defaultValues: {
+      position: member?.position || "",
       role: member?.role || "",
+      status: (member?.status === "pending" ? "active" : member?.status) || "active",
     },
   })
 
   // Update form when member changes
   React.useEffect(() => {
     if (member && open) {
-      form.reset({ role: member.role })
+      // If status is pending, default to active (pending cannot be manually set)
+      const status = member.status === "pending" ? "active" : (member.status || "active")
+      form.reset({ 
+        position: member.position || "", 
+        role: member.role,
+        status: status
+      })
     }
   }, [member, open, form])
 
-  const onSubmit = (data: EditRoleFormValues) => {
+  const onSubmit = (data: EditMemberFormValues) => {
     if (member) {
-      onSave(member.id, data.role)
+      onSave(member.id, { 
+        position: data.position, 
+        role: data.role,
+        status: data.status
+      })
       onOpenChange(false)
     }
   }
@@ -89,10 +104,9 @@ export function EditMemberRoleDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Edit Member Role</DialogTitle>
+          <DialogTitle>Edit Member</DialogTitle>
           <DialogDescription>
-            Change the role for this team member. This will update their
-            permissions and access level.
+            Update the position, role, and status for this team member.
           </DialogDescription>
         </DialogHeader>
         <div className="flex items-center gap-3 py-4 border-b">
@@ -106,6 +120,25 @@ export function EditMemberRoleDialog({
         </div>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="position"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Position</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="e.g., Financial Advisor"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    The member's job title or position
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="role"
@@ -131,7 +164,35 @@ export function EditMemberRoleDialog({
                     </SelectContent>
                   </Select>
                   <FormDescription>
-                    Select the new role for this member
+                    Select the role for this member. This determines their permissions and access level.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                    value={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Active members have full access. Inactive members cannot access the system. Note: Pending status is automatically set for invited members who haven't registered yet and cannot be manually changed.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

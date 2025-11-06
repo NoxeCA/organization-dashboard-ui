@@ -40,6 +40,7 @@ import type { Site } from "./sites-management"
 
 const inviteMemberSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
+  position: z.string().optional(),
   role: z.string().min(1, "Please select a role"),
   siteIds: z.array(z.string()).optional(),
 })
@@ -69,6 +70,7 @@ export function InviteMemberDialog({
     resolver: zodResolver(inviteMemberSchema),
     defaultValues: {
       email: "",
+      position: "",
       role: undefined,
       siteIds: [],
     },
@@ -89,7 +91,12 @@ export function InviteMemberDialog({
   }
 
   const handleClose = () => {
-    form.reset()
+    form.reset({
+      email: "",
+      position: "",
+      role: undefined,
+      siteIds: [],
+    })
     setSelectedSiteIds([])
     onOpenChange?.(false)
   }
@@ -122,6 +129,25 @@ export function InviteMemberDialog({
                   </FormControl>
                   <FormDescription>
                     The email address of the person you want to invite
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="position"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Position</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="e.g., Financial Advisor"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    The member's job title or position (optional)
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
