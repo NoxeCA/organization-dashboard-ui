@@ -24,6 +24,7 @@ export interface Address {
   state: string
   zipCode: string
   country: string
+  email: string
   siteId?: string
   siteName?: string
 }
@@ -37,6 +38,8 @@ interface AddressesManagementProps {
   defaultShippingAddressId?: string
   onDefaultBillingAddressChange?: (id: string) => void
   onDefaultShippingAddressChange?: (id: string) => void
+  defaultBillingEmail?: string
+  defaultShippingEmail?: string
 }
 
 export function AddressesManagement({
@@ -48,6 +51,8 @@ export function AddressesManagement({
   defaultShippingAddressId,
   onDefaultBillingAddressChange,
   onDefaultShippingAddressChange,
+  defaultBillingEmail,
+  defaultShippingEmail,
 }: AddressesManagementProps) {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
   const [addressType, setAddressType] = useState<"billing" | "shipping">("billing")
@@ -59,6 +64,7 @@ export function AddressesManagement({
     state: string
     zipCode: string
     country: string
+    email: string
     siteId?: string
   }) => {
     const newAddress: Address = {
@@ -114,6 +120,8 @@ export function AddressesManagement({
         }}
         onCreate={handleCreateAddress}
         type={addressType}
+        defaultBillingEmail={defaultBillingEmail}
+        defaultShippingEmail={defaultShippingEmail}
       />
 
       <Tabs defaultValue="billing" className="w-full">
@@ -150,13 +158,14 @@ export function AddressesManagement({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Address</TableHead>
+                    <TableHead>Email</TableHead>
                     <TableHead>Site</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {billingAddresses.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={2} className="text-center py-8">
+                      <TableCell colSpan={3} className="text-center py-8">
                         <div className="flex flex-col items-center gap-2">
                           <CreditCard className="h-8 w-8 text-muted-foreground" />
                           <p className="text-muted-foreground">
@@ -184,6 +193,9 @@ export function AddressesManagement({
                               </div>
                             </div>
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">{address.email}</div>
                         </TableCell>
                         <TableCell>
                           {address.siteName ? (
@@ -225,13 +237,14 @@ export function AddressesManagement({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Address</TableHead>
+                    <TableHead>Email</TableHead>
                     <TableHead>Site</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {shippingAddresses.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={2} className="text-center py-8">
+                      <TableCell colSpan={3} className="text-center py-8">
                         <div className="flex flex-col items-center gap-2">
                           <Package className="h-8 w-8 text-muted-foreground" />
                           <p className="text-muted-foreground">
@@ -259,6 +272,9 @@ export function AddressesManagement({
                               </div>
                             </div>
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="text-sm">{address.email}</div>
                         </TableCell>
                         <TableCell>
                           {address.siteName ? (

@@ -41,6 +41,7 @@ const mockBillingAddresses: Address[] = [
     state: "NY",
     zipCode: "10001",
     country: "USA",
+    email: "billing@acmecorp.com",
     siteId: "1",
     siteName: "Main Office",
   },
@@ -52,6 +53,7 @@ const mockBillingAddresses: Address[] = [
     state: "NY",
     zipCode: "10001",
     country: "USA",
+    email: "billing@acmecorp.com",
     siteId: "2",
     siteName: "Warehouse West",
   },
@@ -66,6 +68,7 @@ const mockShippingAddresses: Address[] = [
     state: "NY",
     zipCode: "10001",
     country: "USA",
+    email: "shipping@acmecorp.com",
     siteId: "1",
     siteName: "Main Office",
   },
@@ -77,6 +80,7 @@ const mockShippingAddresses: Address[] = [
     state: "CA",
     zipCode: "90001",
     country: "USA",
+    email: "shipping@acmecorp.com",
     siteId: "2",
     siteName: "Warehouse West",
   },
@@ -90,6 +94,17 @@ export default function Home() {
   // Organization-level default addresses
   const [defaultBillingAddressId, setDefaultBillingAddressId] = useState<string>("1")
   const [defaultShippingAddressId, setDefaultShippingAddressId] = useState<string>("1")
+  
+  // Organization-level default email addresses (derived from default addresses)
+  const defaultBillingEmail = useMemo(() => {
+    const defaultAddress = billingAddresses.find(addr => addr.id === defaultBillingAddressId)
+    return defaultAddress?.email || "billing@acmecorp.com"
+  }, [billingAddresses, defaultBillingAddressId])
+  
+  const defaultShippingEmail = useMemo(() => {
+    const defaultAddress = shippingAddresses.find(addr => addr.id === defaultShippingAddressId)
+    return defaultAddress?.email || "shipping@acmecorp.com"
+  }, [shippingAddresses, defaultShippingAddressId])
 
   // Calculate member counts per role
   const memberCounts = useMemo(() => {
@@ -156,6 +171,8 @@ export default function Home() {
                   shippingAddresses={shippingAddresses}
                   defaultBillingAddressId={defaultBillingAddressId}
                   defaultShippingAddressId={defaultShippingAddressId}
+                  defaultBillingEmail={defaultBillingEmail}
+                  defaultShippingEmail={defaultShippingEmail}
                 />
               </TabsContent>
               <TabsContent value="addresses" className="mt-6">
@@ -168,6 +185,8 @@ export default function Home() {
                   defaultShippingAddressId={defaultShippingAddressId}
                   onDefaultBillingAddressChange={setDefaultBillingAddressId}
                   onDefaultShippingAddressChange={setDefaultShippingAddressId}
+                  defaultBillingEmail={defaultBillingEmail}
+                  defaultShippingEmail={defaultShippingEmail}
                 />
               </TabsContent>
               <TabsContent value="rates" className="mt-6">

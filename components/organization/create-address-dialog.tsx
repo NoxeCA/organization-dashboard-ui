@@ -16,20 +16,14 @@ import {
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
+import { useState } from "react"
 
 const createAddressSchema = z.object({
   address: z.string().min(1, "Address is required"),
@@ -37,6 +31,17 @@ const createAddressSchema = z.object({
   state: z.string().min(1, "State is required"),
   zipCode: z.string().min(1, "Zip code is required"),
   country: z.string().min(1, "Country is required"),
+  useDefaultEmail: z.boolean().optional(),
+  email: z.string().email("Invalid email address").optional(),
+}).refine((data) => {
+  // Email is required if not using default email
+  if (!data.useDefaultEmail && (!data.email || data.email.length === 0)) {
+    return false
+  }
+  return true
+}, {
+  message: "Email is required when not using default email",
+  path: ["email"],
 })
 
 type CreateAddressFormValues = z.infer<typeof createAddressSchema>
@@ -47,6 +52,8 @@ interface CreateAddressDialogProps {
   onCreate: (data: CreateAddressFormValues & { type: "billing" | "shipping" }) => void
   type: "billing" | "shipping"
   children?: React.ReactNode
+  defaultBillingEmail?: string
+  defaultShippingEmail?: string
 }
 
 export function CreateAddressDialog({
@@ -55,7 +62,12 @@ export function CreateAddressDialog({
   onCreate,
   type,
   children,
+  defaultBillingEmail,
+  defaultShippingEmail,
 }: CreateAddressDialogProps) {
+  const [useDefaultEmail, setUseDefaultEmail] = useState(true)
+  const defaultEmail = type === "billing" ? defaultBillingEmail : defaultShippingEmail
+
   const form = useForm<CreateAddressFormValues>({
     resolver: zodResolver(createAddressSchema),
     defaultValues: {
@@ -64,18 +76,44 @@ export function CreateAddressDialog({
       state: "",
       zipCode: "",
       country: "USA",
+      useDefaultEmail: true,
+      email: "",
     },
   })
 
+  // Reset form when dialog opens/closes
+  const handleOpenChange = (isOpen: boolean) => {
+    if (isOpen) {
+      setUseDefaultEmail(true)
+      form.reset({
+        address: "",
+        city: "",
+        state: "",
+        zipCode: "",
+        country: "USA",
+        useDefaultEmail: true,
+        email: "",
+      })
+    }
+    onOpenChange?.(isOpen)
+  }
+
   const onSubmit = (data: CreateAddressFormValues) => {
-    onCreate({ ...data, type })
+    // If using default email, use the default email value
+    const finalData = {
+      ...data,
+      email: data.useDefaultEmail && defaultEmail ? defaultEmail : data.email || "",
+      type,
+    }
+    onCreate(finalData)
     form.reset()
+    setUseDefaultEmail(true)
   }
 
   const addressTypeLabel = type === "billing" ? "Billing" : "Shipping"
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
@@ -157,6 +195,52 @@ export function CreateAddressDialog({
                   </FormItem>
                 )}
               />
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="use-default-email"
+                  checked={useDefaultEmail}
+                  onCheckedChange={(checked) => {
+                    setUseDefaultEmail(checked === true)
+                    form.setValue("useDefaultEmail", checked === true)
+                    if (checked === true) {
+                      form.setValue("email", "")
+                    }
+                  }}
+                />
+                <label
+                  htmlFor="use-default-email"
+                  className="text-sm font-medium cursor-pointer leading-none"
+                >
+                  Use default {type === "billing" ? "billing" : "shipping"} email address
+                </label>
+              </div>
+              {useDefaultEmail && defaultEmail && (
+                <div className="ml-6 mt-1">
+                  <p className="text-xs text-muted-foreground">
+                    {defaultEmail}
+                  </p>
+                </div>
+              )}
+              {!useDefaultEmail && (
+                <div className="ml-6 mt-2">
+                  <FormField
+                    control={form.control}
+                    name="email"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Email Address</FormLabel>
+                        <FormControl>
+                          <Input type="email" placeholder={type === "billing" ? "billing@example.com" : "shipping@example.com"} {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              )}
             </div>
 
             <DialogFooter>

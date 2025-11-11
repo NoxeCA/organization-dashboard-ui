@@ -37,6 +37,8 @@ export interface Site {
   shippingAddressId?: string
   billingAddress?: string
   shippingAddress?: string
+  billingEmail?: string
+  shippingEmail?: string
   rates?: Rate[] // Site-specific rates that override organization rates
 }
 
@@ -49,6 +51,8 @@ interface SitesManagementProps {
   shippingAddresses: Address[]
   defaultBillingAddressId: string
   defaultShippingAddressId: string
+  defaultBillingEmail: string
+  defaultShippingEmail: string
 }
 
 export function SitesManagement({ 
@@ -60,6 +64,8 @@ export function SitesManagement({
   shippingAddresses,
   defaultBillingAddressId,
   defaultShippingAddressId,
+  defaultBillingEmail,
+  defaultShippingEmail,
 }: SitesManagementProps) {
   const router = useRouter()
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false)
@@ -75,6 +81,8 @@ export function SitesManagement({
     country: string
     billingAddressId?: string
     shippingAddressId?: string
+    billingEmail?: string
+    shippingEmail?: string
   }) => {
     const newSite: Site = {
       id: Date.now().toString(),
@@ -93,6 +101,8 @@ export function SitesManagement({
     country: string
     billingAddressId?: string
     shippingAddressId?: string
+    billingEmail?: string
+    shippingEmail?: string
   }) => {
     const updatedSites = sites.map((site) =>
       site.id === id
@@ -131,6 +141,8 @@ export function SitesManagement({
           shippingAddresses={shippingAddresses}
           defaultBillingAddressId={defaultBillingAddressId}
           defaultShippingAddressId={defaultShippingAddressId}
+          defaultBillingEmail={defaultBillingEmail}
+          defaultShippingEmail={defaultShippingEmail}
         >
           <Button>
             <Plus className="mr-2 h-4 w-4" />
@@ -152,6 +164,8 @@ export function SitesManagement({
           shippingAddresses={shippingAddresses}
           defaultBillingAddressId={defaultBillingAddressId}
           defaultShippingAddressId={defaultShippingAddressId}
+          defaultBillingEmail={defaultBillingEmail}
+          defaultShippingEmail={defaultShippingEmail}
         />
       </div>
 
