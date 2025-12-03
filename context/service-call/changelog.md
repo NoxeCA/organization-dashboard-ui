@@ -1,5 +1,41 @@
 # Service Call Domain - Changelog
 
+## Iteration 2 - 2025-12-03
+
+### Added
+- `TaskCard` component for reusable, improved task card design with context menu
+- `TaskCardView` component for card-based view grouped by status
+- `TaskTableView` component for table-based view
+- Group filter dropdown to filter tasks by specific group or show all
+- Context menu (right-click) for quick task status changes on cards
+- Click-to-change status dropdown in table rows
+- Group badges on task cards showing which group a task belongs to
+- Visual progress indicators on task cards
+
+### Changed
+- **Replaced Kanban with simpler card-based status grouping** - cards grouped by status (Backlog, To Do, In Progress, Done)
+- **Table view** with columns: Task, Group, Status, Assignees, Due Date, Hours, Materials
+- Task cards now show group name as colored badge
+- Improved task card visual hierarchy (name, description, metadata clearly separated)
+- Simplified detail page state management (removed Kanban column tracking)
+- View toggle now switches between "Cards" and "Table" views
+- Status can be changed via context menu (cards) or inline dropdown (table)
+
+### Removed
+- `TaskGroupSection` component (replaced by simpler approach)
+- Kanban board and drag-and-drop functionality
+- Collapsible group sections (groups now shown as badges/filters)
+- kibo-ui Kanban dependency from detail page
+
+### Decisions
+- Card-based status grouping is simpler than Kanban and sufficient for task management
+- Table view better for scanning many tasks quickly (sortable columns in future)
+- Group filter provides focus without fragmenting the view
+- Context menu on cards provides faster workflow for common status changes
+- Kept TaskGroupDialog for creating/editing groups (groups still exist, just displayed differently)
+
+---
+
 ## Iteration 1 - 2025-12-03
 
 ### Added
