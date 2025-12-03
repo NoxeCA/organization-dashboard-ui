@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
-import { CalendarIcon, Plus, X } from "lucide-react";
+import { CalendarIcon, FolderOpen, Plus, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -36,7 +36,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -47,7 +46,7 @@ import { cn } from "@/lib/utils";
 
 import {
   type Task,
-  type TaskStatus,
+  type TaskGroup,
   type Employee,
   type Site,
   TASK_STATUSES,
@@ -59,6 +58,7 @@ const taskFormSchema = z.object({
   description: z.string().optional(),
   status: z.enum(["backlog", "todo", "in_progress", "done"]),
   siteId: z.string().min(1, "Site is required"),
+  groupId: z.string().optional(),
   plannedTime: z.coerce.number().min(0).optional(),
   dueDate: z.date().optional(),
   assignedEmployeeIds: z.array(z.string()),
@@ -70,7 +70,8 @@ interface TaskDialogProps {
   serviceCallId: string;
   sites: Site[];
   employees: Employee[];
-  onTaskCreate?: (task: Partial<Task>) => void;
+  taskGroups?: TaskGroup[];
+  onTaskCreate?: (task: Partial<Task>, groupId?: string) => void;
   trigger?: React.ReactNode;
 }
 
@@ -78,11 +79,11 @@ export function TaskDialog({
   serviceCallId,
   sites = mockSites,
   employees = mockEmployees,
+  taskGroups = [],
   onTaskCreate,
   trigger,
 }: TaskDialogProps) {
   const [open, setOpen] = useState(false);
-  const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
 
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskFormSchema),
@@ -91,6 +92,7 @@ export function TaskDialog({
       description: "",
       status: "todo",
       siteId: sites[0]?.id || "",
+      groupId: "",
       plannedTime: undefined,
       dueDate: undefined,
       assignedEmployeeIds: [],
@@ -118,9 +120,10 @@ export function TaskDialog({
       updatedAt: new Date().toISOString(),
     };
 
-    onTaskCreate?.(newTask);
+    // Pass the groupId as second parameter if specified
+    const groupId = data.groupId && data.groupId !== "none" ? data.groupId : undefined;
+    onTaskCreate?.(newTask, groupId);
     form.reset();
-    setSelectedEmployees([]);
     setOpen(false);
   };
 
@@ -146,7 +149,7 @@ export function TaskDialog({
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Create New Task</DialogTitle>
           <DialogDescription>
@@ -187,6 +190,46 @@ export function TaskDialog({
                 </FormItem>
               )}
             />
+
+            {/* Task Group Selector */}
+            {taskGroups.length > 0 && (
+              <FormField
+                control={form.control}
+                name="groupId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <FolderOpen className="h-4 w-4" />
+                      Task Group
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a group (optional)" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">
+                          <span className="text-muted-foreground">No Group (Ungrouped)</span>
+                        </SelectItem>
+                        {taskGroups.map((group) => (
+                          <SelectItem key={group.id} value={group.id}>
+                            <div className="flex items-center gap-2">
+                              <FolderOpen className="h-3 w-3 text-muted-foreground" />
+                              {group.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Optionally assign this task to a group
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <div className="grid grid-cols-2 gap-4">
               <FormField

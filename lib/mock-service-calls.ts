@@ -90,8 +90,9 @@ export const mockSites: Site[] = [
   },
 ];
 
-// Mock Tasks
-export const mockTasks: Task[] = [
+// Mock Tasks for SC-1 (Network Connectivity Issues)
+// Diagnostics Group Tasks
+const sc1DiagnosticsTasks: Task[] = [
   {
     id: "task-1",
     name: "Diagnose network connectivity issue",
@@ -121,6 +122,56 @@ export const mockTasks: Task[] = [
     createdAt: "2024-01-14T10:00:00Z",
     updatedAt: "2024-01-15T14:30:00Z",
   },
+  {
+    id: "task-1b",
+    name: "Run cable diagnostics",
+    description: "Use cable tester to verify all patch cables in affected rack",
+    status: "done",
+    column: "done",
+    serviceCallId: "sc-1",
+    siteId: "site-1",
+    site: mockSites[0],
+    assignedEmployees: [mockEmployees[1]],
+    plannedTime: 1,
+    timeEntries: [
+      {
+        id: "te-1b",
+        taskId: "task-1b",
+        employeeId: "emp-2",
+        employee: mockEmployees[1],
+        date: "2024-01-15",
+        hours: 0.75,
+        description: "Tested all 24 patch cables, found 2 faulty",
+        billable: true,
+      },
+    ],
+    materials: [],
+    startDate: "2024-01-15",
+    dueDate: "2024-01-15",
+    createdAt: "2024-01-14T10:30:00Z",
+    updatedAt: "2024-01-15T15:00:00Z",
+  },
+  {
+    id: "task-1c",
+    name: "Document network topology",
+    description: "Update network diagram with current configuration",
+    status: "in_progress",
+    column: "in_progress",
+    serviceCallId: "sc-1",
+    siteId: "site-1",
+    site: mockSites[0],
+    assignedEmployees: [mockEmployees[2]],
+    plannedTime: 2,
+    timeEntries: [],
+    materials: [],
+    dueDate: "2024-01-17",
+    createdAt: "2024-01-15T16:00:00Z",
+    updatedAt: "2024-01-15T16:00:00Z",
+  },
+];
+
+// Hardware Repair Group Tasks
+const sc1HardwareRepairTasks: Task[] = [
   {
     id: "task-2",
     name: "Replace faulty network switch",
@@ -161,6 +212,76 @@ export const mockTasks: Task[] = [
     updatedAt: "2024-01-16T12:00:00Z",
   },
   {
+    id: "task-2b",
+    name: "Replace faulty patch cables",
+    description: "Replace 2 damaged Cat6 cables identified during diagnostics",
+    status: "done",
+    column: "done",
+    serviceCallId: "sc-1",
+    siteId: "site-1",
+    site: mockSites[0],
+    assignedEmployees: [mockEmployees[1]],
+    plannedTime: 0.5,
+    timeEntries: [
+      {
+        id: "te-2b",
+        taskId: "task-2b",
+        employeeId: "emp-2",
+        employee: mockEmployees[1],
+        date: "2024-01-16",
+        hours: 0.5,
+        description: "Replaced 2 faulty patch cables",
+        billable: true,
+      },
+    ],
+    materials: [
+      {
+        id: "mat-2b",
+        taskId: "task-2b",
+        name: "Cat6 Patch Cable 3m",
+        quantity: 2,
+        unitCost: 15,
+        totalCost: 30,
+        status: "used",
+      },
+    ],
+    startDate: "2024-01-16",
+    dueDate: "2024-01-16",
+    createdAt: "2024-01-16T08:00:00Z",
+    updatedAt: "2024-01-16T10:00:00Z",
+  },
+  {
+    id: "task-2c",
+    name: "Install cable management",
+    description: "Add cable management arms and organize cables in rack 3",
+    status: "todo",
+    column: "todo",
+    serviceCallId: "sc-1",
+    siteId: "site-1",
+    site: mockSites[0],
+    assignedEmployees: [mockEmployees[1]],
+    plannedTime: 2,
+    timeEntries: [],
+    materials: [
+      {
+        id: "mat-2c",
+        taskId: "task-2c",
+        name: "Cable Management Arm",
+        quantity: 4,
+        unitCost: 45,
+        totalCost: 180,
+        status: "ordered",
+      },
+    ],
+    dueDate: "2024-01-18",
+    createdAt: "2024-01-16T12:00:00Z",
+    updatedAt: "2024-01-16T12:00:00Z",
+  },
+];
+
+// Configuration Group Tasks
+const sc1ConfigurationTasks: Task[] = [
+  {
     id: "task-3",
     name: "Configure and test new switch",
     description: "Apply standard config and verify connectivity",
@@ -178,11 +299,67 @@ export const mockTasks: Task[] = [
     updatedAt: "2024-01-15T15:30:00Z",
   },
   {
+    id: "task-3b",
+    name: "Configure VLAN settings",
+    description: "Apply VLAN configuration matching existing network segmentation",
+    status: "backlog",
+    column: "backlog",
+    serviceCallId: "sc-1",
+    siteId: "site-1",
+    site: mockSites[0],
+    assignedEmployees: [mockEmployees[2]],
+    plannedTime: 1.5,
+    timeEntries: [],
+    materials: [],
+    dueDate: "2024-01-18",
+    createdAt: "2024-01-15T15:45:00Z",
+    updatedAt: "2024-01-15T15:45:00Z",
+  },
+  {
+    id: "task-3c",
+    name: "Update monitoring system",
+    description: "Add new switch to SNMP monitoring and alert system",
+    status: "backlog",
+    column: "backlog",
+    serviceCallId: "sc-1",
+    siteId: "site-1",
+    site: mockSites[0],
+    assignedEmployees: [mockEmployees[3]],
+    plannedTime: 1,
+    timeEntries: [],
+    materials: [],
+    dueDate: "2024-01-19",
+    createdAt: "2024-01-15T16:00:00Z",
+    updatedAt: "2024-01-15T16:00:00Z",
+  },
+  {
+    id: "task-3d",
+    name: "Verify failover configuration",
+    description: "Test redundancy and failover with backup switch",
+    status: "backlog",
+    column: "backlog",
+    serviceCallId: "sc-1",
+    siteId: "site-1",
+    site: mockSites[0],
+    assignedEmployees: [mockEmployees[2], mockEmployees[0]],
+    plannedTime: 2,
+    timeEntries: [],
+    materials: [],
+    dueDate: "2024-01-19",
+    createdAt: "2024-01-15T16:15:00Z",
+    updatedAt: "2024-01-15T16:15:00Z",
+  },
+];
+
+// Mock Tasks for SC-2 (Security Camera Installation)
+// Camera Installation Group Tasks
+const sc2CameraInstallationTasks: Task[] = [
+  {
     id: "task-4",
     name: "Install security cameras - Entrance",
     description: "Mount and configure 4 PTZ cameras at main entrance",
-    status: "backlog",
-    column: "backlog",
+    status: "todo",
+    column: "todo",
     serviceCallId: "sc-2",
     siteId: "site-3",
     site: mockSites[2],
@@ -214,6 +391,88 @@ export const mockTasks: Task[] = [
     updatedAt: "2024-01-10T09:00:00Z",
   },
   {
+    id: "task-4b",
+    name: "Run cable conduits",
+    description: "Install weatherproof conduits from entrance to server room",
+    status: "in_progress",
+    column: "in_progress",
+    serviceCallId: "sc-2",
+    siteId: "site-3",
+    site: mockSites[2],
+    assignedEmployees: [mockEmployees[0], mockEmployees[1]],
+    plannedTime: 4,
+    timeEntries: [
+      {
+        id: "te-4b",
+        taskId: "task-4b",
+        employeeId: "emp-1",
+        employee: mockEmployees[0],
+        date: "2024-01-21",
+        hours: 3,
+        description: "Installed 50m of outdoor conduit",
+        billable: true,
+      },
+    ],
+    materials: [
+      {
+        id: "mat-4b",
+        taskId: "task-4b",
+        name: "PVC Conduit 25mm",
+        quantity: 60,
+        unitCost: 8,
+        totalCost: 480,
+        status: "used",
+      },
+    ],
+    startDate: "2024-01-21",
+    dueDate: "2024-01-23",
+    createdAt: "2024-01-10T09:15:00Z",
+    updatedAt: "2024-01-21T16:00:00Z",
+  },
+  {
+    id: "task-4c",
+    name: "Mount camera brackets",
+    description: "Install heavy-duty brackets for PTZ cameras",
+    status: "done",
+    column: "done",
+    serviceCallId: "sc-2",
+    siteId: "site-3",
+    site: mockSites[2],
+    assignedEmployees: [mockEmployees[1]],
+    plannedTime: 2,
+    timeEntries: [
+      {
+        id: "te-4c",
+        taskId: "task-4c",
+        employeeId: "emp-2",
+        employee: mockEmployees[1],
+        date: "2024-01-20",
+        hours: 2.5,
+        description: "Installed 4 camera brackets at entrance",
+        billable: true,
+      },
+    ],
+    materials: [
+      {
+        id: "mat-4c",
+        taskId: "task-4c",
+        name: "PTZ Bracket Heavy Duty",
+        quantity: 4,
+        unitCost: 125,
+        totalCost: 500,
+        status: "used",
+      },
+    ],
+    startDate: "2024-01-20",
+    dueDate: "2024-01-20",
+    createdAt: "2024-01-10T09:30:00Z",
+    updatedAt: "2024-01-20T17:00:00Z",
+  },
+];
+
+// NVR Setup Group Tasks
+const sc2NvrSetupTasks: Task[] = [
+  {
     id: "task-5",
     name: "Configure NVR System",
     description: "Setup NVR and connect all cameras",
@@ -240,6 +499,71 @@ export const mockTasks: Task[] = [
     createdAt: "2024-01-10T09:30:00Z",
     updatedAt: "2024-01-10T09:30:00Z",
   },
+  {
+    id: "task-5b",
+    name: "Install NVR in server rack",
+    description: "Mount NVR unit and connect to network",
+    status: "backlog",
+    column: "backlog",
+    serviceCallId: "sc-2",
+    siteId: "site-3",
+    site: mockSites[2],
+    assignedEmployees: [mockEmployees[0]],
+    plannedTime: 1.5,
+    timeEntries: [],
+    materials: [
+      {
+        id: "mat-5b",
+        taskId: "task-5b",
+        name: "Rack Mount Kit",
+        quantity: 1,
+        unitCost: 85,
+        totalCost: 85,
+        status: "estimated",
+      },
+    ],
+    dueDate: "2024-01-25",
+    createdAt: "2024-01-10T10:00:00Z",
+    updatedAt: "2024-01-10T10:00:00Z",
+  },
+  {
+    id: "task-5c",
+    name: "Configure remote access",
+    description: "Setup secure remote viewing for security team",
+    status: "backlog",
+    column: "backlog",
+    serviceCallId: "sc-2",
+    siteId: "site-3",
+    site: mockSites[2],
+    assignedEmployees: [mockEmployees[2]],
+    plannedTime: 2,
+    timeEntries: [],
+    materials: [],
+    dueDate: "2024-01-27",
+    createdAt: "2024-01-10T10:15:00Z",
+    updatedAt: "2024-01-10T10:15:00Z",
+  },
+  {
+    id: "task-5d",
+    name: "Train security staff",
+    description: "Provide training on NVR operation and camera controls",
+    status: "backlog",
+    column: "backlog",
+    serviceCallId: "sc-2",
+    siteId: "site-3",
+    site: mockSites[2],
+    assignedEmployees: [mockEmployees[3]],
+    plannedTime: 3,
+    timeEntries: [],
+    materials: [],
+    dueDate: "2024-01-27",
+    createdAt: "2024-01-10T10:30:00Z",
+    updatedAt: "2024-01-10T10:30:00Z",
+  },
+];
+
+// SC-3 Tasks (UPS Battery)
+const sc3Tasks: Task[] = [
   {
     id: "task-6",
     name: "Repair server UPS",
@@ -269,6 +593,16 @@ export const mockTasks: Task[] = [
   },
 ];
 
+// Combine all tasks
+export const mockTasks: Task[] = [
+  ...sc1DiagnosticsTasks,
+  ...sc1HardwareRepairTasks,
+  ...sc1ConfigurationTasks,
+  ...sc2CameraInstallationTasks,
+  ...sc2NvrSetupTasks,
+  ...sc3Tasks,
+];
+
 // Mock Service Calls
 export const mockServiceCalls: ServiceCall[] = [
   {
@@ -288,9 +622,29 @@ export const mockServiceCalls: ServiceCall[] = [
     requesterId: "cust-1",
     issueType: "Network",
     equipmentType: "Switch",
-    tasks: mockTasks.filter((t) => t.serviceCallId === "sc-1"),
+    tasks: [...sc1DiagnosticsTasks, ...sc1HardwareRepairTasks, ...sc1ConfigurationTasks],
+    taskGroups: [
+      {
+        id: "tg-diag",
+        name: "Diagnostics",
+        serviceCallId: "sc-1",
+        tasks: sc1DiagnosticsTasks,
+      },
+      {
+        id: "tg-repair",
+        name: "Hardware Repair",
+        serviceCallId: "sc-1",
+        tasks: sc1HardwareRepairTasks,
+      },
+      {
+        id: "tg-config",
+        name: "Configuration",
+        serviceCallId: "sc-1",
+        tasks: sc1ConfigurationTasks,
+      },
+    ],
     summary: {
-      predictedMaterial: 3500,
+      predictedMaterial: 3710,
       estimatedSellPrice: 5500,
       estimatedCost: 3800,
       realCost: 2100,
@@ -315,26 +669,26 @@ export const mockServiceCalls: ServiceCall[] = [
     updatedAt: "2024-01-10T09:30:00Z",
     issueType: "Installation",
     equipmentType: "Camera",
-    tasks: mockTasks.filter((t) => t.serviceCallId === "sc-2"),
+    tasks: [...sc2CameraInstallationTasks, ...sc2NvrSetupTasks],
     taskGroups: [
       {
         id: "tg-1",
         name: "Camera Installation",
         serviceCallId: "sc-2",
-        tasks: mockTasks.filter((t) => t.id === "task-4"),
+        tasks: sc2CameraInstallationTasks,
       },
       {
         id: "tg-2",
         name: "NVR Setup",
         serviceCallId: "sc-2",
-        tasks: mockTasks.filter((t) => t.id === "task-5"),
+        tasks: sc2NvrSetupTasks,
       },
     ],
     summary: {
-      predictedMaterial: 4840,
+      predictedMaterial: 5905,
       estimatedSellPrice: 8500,
       estimatedCost: 6200,
-      realCost: 0,
+      realCost: 980,
       realSellPrice: 0,
     },
     clientPO: "PO-HQ-2024-089",
@@ -355,7 +709,7 @@ export const mockServiceCalls: ServiceCall[] = [
     updatedAt: "2024-01-17T08:00:00Z",
     issueType: "Maintenance",
     equipmentType: "UPS",
-    tasks: mockTasks.filter((t) => t.serviceCallId === "sc-3"),
+    tasks: sc3Tasks,
     summary: {
       predictedMaterial: 900,
       estimatedSellPrice: 1800,

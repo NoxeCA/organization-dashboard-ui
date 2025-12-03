@@ -10,23 +10,20 @@ import {
   Clock,
   DollarSign,
   Edit,
-  ExternalLink,
+  FolderOpen,
   ListTodo,
   MapPin,
-  MessageSquare,
   MoreHorizontal,
   Package,
   Plus,
-  Settings,
   User,
-  Users,
   Kanban,
   List,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
@@ -39,29 +36,23 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 import {
-  KanbanProvider,
-  KanbanBoard,
-  KanbanHeader,
-  KanbanCards,
-  KanbanCard,
-} from "@/components/kibo-ui/kanban";
-
-import {
   mockServiceCalls,
   getServiceCallById,
-  getTasksByServiceCallId,
   mockEmployees,
   mockSites,
 } from "@/lib/mock-service-calls";
 import { TaskDialog } from "@/components/service-call/task-dialog";
 import { TaskDetailSheet } from "@/components/service-call/task-detail-sheet";
 import { CommunicationThread } from "@/components/service-call/communication-thread";
+import { TaskGroupDialog } from "@/components/service-call/task-group-dialog";
+import { TaskGroupSection } from "@/components/service-call/task-group-section";
 import {
   SERVICE_CALL_STATUSES,
   TASK_STATUSES,
   PRIORITIES,
   type ServiceCall,
   type Task,
+  type TaskGroup,
   type TaskStatus,
   type ServiceCallStatus,
   type Priority,
@@ -100,142 +91,131 @@ const getPriorityBadge = (priority: Priority) => {
   );
 };
 
-const getTaskStatusColor = (status: TaskStatus) => {
-  const config = TASK_STATUSES.find((s) => s.id === status);
-  return config?.color || "bg-gray-500";
-};
+// Task list view (updated to support groups)
+function TaskListView({
+  tasks,
+  taskGroups,
+  onTaskClick,
+}: {
+  tasks: Task[];
+  taskGroups: TaskGroup[];
+  onTaskClick: (task: Task) => void;
+}) {
+  // Group tasks by task group
+  const groupedByTaskGroup = taskGroups.map(group => ({
+    group,
+    tasks: tasks.filter(t => group.tasks.some(gt => gt.id === t.id)),
+  }));
 
-// Task card component for Kanban
-function TaskCard({ task }: { task: Task }) {
-  const totalHours = task.timeEntries.reduce((sum, te) => sum + te.hours, 0);
+  // Ungrouped tasks
+  const groupedTaskIds = taskGroups.flatMap(g => g.tasks.map(t => t.id));
+  const ungroupedTasks = tasks.filter(t => !groupedTaskIds.includes(t.id));
 
-  return (
-    <div className="space-y-2">
-      <div className="font-medium text-sm">{task.name}</div>
-      {task.description && (
-        <p className="text-xs text-muted-foreground line-clamp-2">
-          {task.description}
-        </p>
-      )}
-      <div className="flex items-center gap-2 flex-wrap">
-        {task.assignedEmployees.length > 0 && (
-          <div className="flex -space-x-1">
-            {task.assignedEmployees.slice(0, 3).map((emp) => (
-              <Avatar key={emp.id} className="h-5 w-5 border-2 border-background">
-                <AvatarImage src={emp.avatar} alt={emp.name} />
-                <AvatarFallback className="text-[8px]">
-                  {emp.name.split(" ").map((n) => n[0]).join("")}
-                </AvatarFallback>
-              </Avatar>
-            ))}
-            {task.assignedEmployees.length > 3 && (
-              <div className="h-5 w-5 rounded-full bg-muted flex items-center justify-center text-[8px] border-2 border-background">
-                +{task.assignedEmployees.length - 3}
+  const renderTasksByStatus = (tasksToRender: Task[]) => {
+    const groupedTasks = TASK_STATUSES.reduce((acc, status) => {
+      acc[status.id] = tasksToRender.filter((t) => t.status === status.id);
+      return acc;
+    }, {} as Record<TaskStatus, Task[]>);
+
+    return (
+      <div className="space-y-4">
+        {TASK_STATUSES.map((status) => {
+          const statusTasks = groupedTasks[status.id];
+          if (statusTasks.length === 0) return null;
+
+          return (
+            <div key={status.id}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className={`h-2 w-2 rounded-full ${status.color}`} />
+                <h4 className="font-medium text-sm">{status.name}</h4>
+                <Badge variant="secondary" className="text-xs">
+                  {statusTasks.length}
+                </Badge>
               </div>
-            )}
-          </div>
-        )}
-        {task.dueDate && (
-          <span className="text-xs text-muted-foreground flex items-center gap-1">
-            <Calendar className="h-3 w-3" />
-            {format(new Date(task.dueDate), "MMM d")}
-          </span>
-        )}
-        {totalHours > 0 && (
-          <span className="text-xs text-muted-foreground flex items-center gap-1">
-            <Clock className="h-3 w-3" />
-            {totalHours}h
-          </span>
-        )}
-      </div>
-      {task.materials.length > 0 && (
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Package className="h-3 w-3" />
-          {task.materials.length} material{task.materials.length > 1 ? "s" : ""}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// Task list view
-function TaskListView({ tasks }: { tasks: Task[] }) {
-  const groupedTasks = TASK_STATUSES.reduce((acc, status) => {
-    acc[status.id] = tasks.filter((t) => t.status === status.id);
-    return acc;
-  }, {} as Record<TaskStatus, Task[]>);
-
-  return (
-    <div className="space-y-6">
-      {TASK_STATUSES.map((status) => {
-        const statusTasks = groupedTasks[status.id];
-        if (statusTasks.length === 0) return null;
-
-        return (
-          <div key={status.id}>
-            <div className="flex items-center gap-2 mb-3">
-              <span className={`h-2 w-2 rounded-full ${status.color}`} />
-              <h3 className="font-medium">{status.name}</h3>
-              <Badge variant="secondary" className="text-xs">
-                {statusTasks.length}
-              </Badge>
-            </div>
-            <div className="space-y-2">
-              {statusTasks.map((task) => (
-                <Card key={task.id} className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <h4 className="font-medium">{task.name}</h4>
-                      {task.description && (
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {task.description}
-                        </p>
-                      )}
-                      <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                        {task.site && (
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {task.site.name}
-                          </span>
+              <div className="space-y-2 pl-4">
+                {statusTasks.map((task) => (
+                  <Card
+                    key={task.id}
+                    className="p-3 cursor-pointer hover:border-primary/50 transition-colors"
+                    onClick={() => onTaskClick(task)}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h5 className="font-medium text-sm">{task.name}</h5>
+                        {task.description && (
+                          <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                            {task.description}
+                          </p>
                         )}
-                        {task.dueDate && (
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {format(new Date(task.dueDate), "MMM d, yyyy")}
-                          </span>
-                        )}
-                        {task.plannedTime && (
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {task.plannedTime}h planned
-                          </span>
-                        )}
+                        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                          {task.site && (
+                            <span className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {task.site.name}
+                            </span>
+                          )}
+                          {task.dueDate && (
+                            <span className="flex items-center gap-1">
+                              <Calendar className="h-3 w-3" />
+                              {format(new Date(task.dueDate), "MMM d")}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex items-center gap-2">
                       {task.assignedEmployees.length > 0 && (
                         <div className="flex -space-x-1">
                           {task.assignedEmployees.slice(0, 2).map((emp) => (
-                            <Avatar key={emp.id} className="h-6 w-6 border-2 border-background">
+                            <Avatar key={emp.id} className="h-5 w-5 border-2 border-background">
                               <AvatarImage src={emp.avatar} alt={emp.name} />
-                              <AvatarFallback className="text-[10px]">
+                              <AvatarFallback className="text-[8px]">
                                 {emp.name.split(" ").map((n) => n[0]).join("")}
                               </AvatarFallback>
                             </Avatar>
                           ))}
                         </div>
                       )}
-                      <Button variant="ghost" size="icon" className="h-8 w-8">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
                     </div>
-                  </div>
-                </Card>
-              ))}
+                  </Card>
+                ))}
+              </div>
             </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Render grouped tasks */}
+      {groupedByTaskGroup.map(({ group, tasks: groupTasks }) => (
+        groupTasks.length > 0 && (
+          <div key={group.id} className="border rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <FolderOpen className="h-4 w-4 text-muted-foreground" />
+              <h3 className="font-medium">{group.name}</h3>
+              <Badge variant="secondary" className="text-xs">
+                {groupTasks.length} tasks
+              </Badge>
+            </div>
+            {renderTasksByStatus(groupTasks)}
           </div>
-        );
-      })}
+        )
+      ))}
+
+      {/* Render ungrouped tasks */}
+      {ungroupedTasks.length > 0 && (
+        <div className="border rounded-lg p-4 border-dashed">
+          <div className="flex items-center gap-2 mb-4">
+            <ListTodo className="h-4 w-4 text-muted-foreground" />
+            <h3 className="font-medium text-muted-foreground">Ungrouped Tasks</h3>
+            <Badge variant="secondary" className="text-xs">
+              {ungroupedTasks.length} tasks
+            </Badge>
+          </div>
+          {renderTasksByStatus(ungroupedTasks)}
+        </div>
+      )}
     </div>
   );
 }
@@ -293,6 +273,8 @@ export default function ServiceCallDetailPage({
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [taskSheetOpen, setTaskSheetOpen] = useState(false);
   const [serviceCallStatus, setServiceCallStatus] = useState<ServiceCallStatus | null>(null);
+  const [editingGroup, setEditingGroup] = useState<TaskGroup | null>(null);
+  const [groupDialogOpen, setGroupDialogOpen] = useState(false);
 
   // Get service call data
   const serviceCall = getServiceCallById(resolvedParams.id);
@@ -319,17 +301,15 @@ export default function ServiceCallDetailPage({
     );
   }
 
-  const tasks = serviceCall.tasks;
+  // Task state with column for Kanban
   const [taskData, setTaskData] = useState(
-    tasks.map((t) => ({ ...t, column: t.status }))
+    serviceCall.tasks.map((t) => ({ ...t, column: t.status }))
   );
 
-  // Kanban columns based on task statuses
-  const kanbanColumns = TASK_STATUSES.map((status) => ({
-    id: status.id,
-    name: status.name,
-    color: status.color,
-  }));
+  // Task groups state
+  const [taskGroups, setTaskGroups] = useState<TaskGroup[]>(
+    serviceCall.taskGroups || []
+  );
 
   const handleTaskClick = (task: Task) => {
     setSelectedTask(task);
@@ -345,17 +325,80 @@ export default function ServiceCallDetailPage({
 
   const handleStatusChange = (newStatus: ServiceCallStatus) => {
     setServiceCallStatus(newStatus);
-    // In a real app, this would make an API call
+  };
+
+  const handleCreateGroup = (newGroup: TaskGroup) => {
+    setTaskGroups([...taskGroups, newGroup]);
+  };
+
+  const handleUpdateGroup = (updatedGroup: TaskGroup) => {
+    setTaskGroups(taskGroups.map(g =>
+      g.id === updatedGroup.id ? updatedGroup : g
+    ));
+    setEditingGroup(null);
+    setGroupDialogOpen(false);
+  };
+
+  const handleDeleteGroup = (group: TaskGroup) => {
+    // Move tasks from deleted group to ungrouped
+    const groupTaskIds = group.tasks.map(t => t.id);
+    setTaskGroups(taskGroups.filter(g => g.id !== group.id));
+  };
+
+  const handleEditGroup = (group: TaskGroup) => {
+    setEditingGroup(group);
+    setGroupDialogOpen(true);
+  };
+
+  // Get tasks for a specific group
+  const getTasksForGroup = (group: TaskGroup | null) => {
+    if (group === null) {
+      // Ungrouped tasks
+      const groupedTaskIds = taskGroups.flatMap(g => g.tasks.map(t => t.id));
+      return taskData.filter(t => !groupedTaskIds.includes(t.id));
+    }
+    return taskData.filter(t => group.tasks.some(gt => gt.id === t.id));
+  };
+
+  // Update tasks when they change in a group section
+  const handleGroupTasksChange = (
+    group: TaskGroup | null,
+    updatedTasks: (Task & { column: TaskStatus })[]
+  ) => {
+    // Update taskData with the new task states
+    setTaskData(prevData => {
+      const updatedIds = updatedTasks.map(t => t.id);
+      const otherTasks = prevData.filter(t => !updatedIds.includes(t.id));
+      return [...otherTasks, ...updatedTasks];
+    });
+  };
+
+  const handleCreateTask = (newTask: Partial<Task>, groupId?: string) => {
+    const taskWithColumn = { ...newTask, column: newTask.status } as typeof taskData[0];
+    setTaskData([...taskData, taskWithColumn]);
+
+    // If a group is specified, add task to that group
+    if (groupId) {
+      setTaskGroups(taskGroups.map(g => {
+        if (g.id === groupId) {
+          return {
+            ...g,
+            tasks: [...g.tasks, newTask as Task],
+          };
+        }
+        return g;
+      }));
+    }
   };
 
   const currentStatus = serviceCallStatus || serviceCall.status;
   const totalTasks = taskData.length;
   const completedTasks = taskData.filter((t) => t.status === "done").length;
-  const totalHours = tasks.reduce(
+  const totalHours = taskData.reduce(
     (sum, t) => sum + t.timeEntries.reduce((s, te) => s + te.hours, 0),
     0
   );
-  const totalMaterialCost = tasks.reduce(
+  const totalMaterialCost = taskData.reduce(
     (sum, t) => sum + t.materials.reduce((s, m) => s + m.totalCost, 0),
     0
   );
@@ -501,6 +544,10 @@ export default function ServiceCallDetailPage({
                     />
                   </div>
                   <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Groups</span>
+                    <span className="font-medium">{taskGroups.length}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Hours Logged</span>
                     <span className="font-medium">{totalHours}h</span>
                   </div>
@@ -522,6 +569,11 @@ export default function ServiceCallDetailPage({
               <CardTitle className="flex items-center gap-2">
                 <ListTodo className="h-5 w-5" />
                 Tasks
+                {taskGroups.length > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {taskGroups.length} group{taskGroups.length !== 1 ? "s" : ""}
+                  </Badge>
+                )}
               </CardTitle>
               <div className="flex items-center gap-2">
                 <Tabs
@@ -539,67 +591,69 @@ export default function ServiceCallDetailPage({
                     </TabsTrigger>
                   </TabsList>
                 </Tabs>
+                <TaskGroupDialog
+                  serviceCallId={serviceCall.id}
+                  onGroupCreate={handleCreateGroup}
+                />
                 <TaskDialog
                   serviceCallId={serviceCall.id}
                   sites={mockSites.filter(s => s.customerId === serviceCall.customerId)}
                   employees={mockEmployees}
-                  onTaskCreate={(newTask) => {
-                    setTaskData([...taskData, { ...newTask, column: newTask.status } as typeof taskData[0]]);
-                  }}
+                  taskGroups={taskGroups}
+                  onTaskCreate={(newTask, groupId) => handleCreateTask(newTask, groupId)}
                 />
               </div>
             </div>
           </CardHeader>
           <CardContent>
             {taskViewMode === "kanban" ? (
-              <div className="min-h-[400px]">
-                {tasks.length > 0 ? (
-                  <KanbanProvider
-                    columns={kanbanColumns}
-                    data={taskData}
-                    onDataChange={(newData) => setTaskData(newData as typeof taskData)}
-                  >
-                    {(column) => (
-                      <KanbanBoard key={column.id} id={column.id}>
-                        <KanbanHeader className="flex items-center gap-2">
-                          <span className={`h-2 w-2 rounded-full ${column.color}`} />
-                          {column.name}
-                          <Badge variant="secondary" className="ml-auto text-xs">
-                            {taskData.filter((t) => t.column === column.id).length}
-                          </Badge>
-                        </KanbanHeader>
-                        <KanbanCards id={column.id}>
-                          {(item) => {
-                            const task = taskData.find(t => t.id === item.id)!;
-                            return (
-                              <KanbanCard
-                                key={item.id}
-                                id={item.id}
-                                name={item.name}
-                                column={item.column}
-                                onClick={() => handleTaskClick(task)}
-                              >
-                                <TaskCard task={task} />
-                              </KanbanCard>
-                            );
-                          }}
-                        </KanbanCards>
-                      </KanbanBoard>
-                    )}
-                  </KanbanProvider>
+              <div className="space-y-6 min-h-[400px]">
+                {taskData.length > 0 || taskGroups.length > 0 ? (
+                  <>
+                    {/* Render task groups */}
+                    {taskGroups.map((group) => (
+                      <TaskGroupSection
+                        key={group.id}
+                        group={group}
+                        tasks={getTasksForGroup(group)}
+                        onTaskClick={handleTaskClick}
+                        onTasksChange={(tasks) => handleGroupTasksChange(group, tasks)}
+                        onEditGroup={handleEditGroup}
+                        onDeleteGroup={handleDeleteGroup}
+                      />
+                    ))}
+
+                    {/* Render ungrouped tasks */}
+                    <TaskGroupSection
+                      group={null}
+                      tasks={getTasksForGroup(null)}
+                      onTaskClick={handleTaskClick}
+                      onTasksChange={(tasks) => handleGroupTasksChange(null, tasks)}
+                      defaultOpen={taskGroups.length === 0}
+                    />
+                  </>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                     <ListTodo className="h-12 w-12 mb-4 opacity-50" />
                     <p className="text-lg font-medium">No tasks yet</p>
-                    <p className="text-sm">Create your first task to get started</p>
-                    <div className="mt-4">
+                    <p className="text-sm">Create a task group or add a task to get started</p>
+                    <div className="mt-4 flex gap-2">
+                      <TaskGroupDialog
+                        serviceCallId={serviceCall.id}
+                        onGroupCreate={handleCreateGroup}
+                        trigger={
+                          <Button variant="outline">
+                            <FolderOpen className="mr-2 h-4 w-4" />
+                            Create Group
+                          </Button>
+                        }
+                      />
                       <TaskDialog
                         serviceCallId={serviceCall.id}
                         sites={mockSites.filter(s => s.customerId === serviceCall.customerId)}
                         employees={mockEmployees}
-                        onTaskCreate={(newTask) => {
-                          setTaskData([...taskData, { ...newTask, column: newTask.status } as typeof taskData[0]]);
-                        }}
+                        taskGroups={taskGroups}
+                        onTaskCreate={(newTask, groupId) => handleCreateTask(newTask, groupId)}
                         trigger={
                           <Button>
                             <Plus className="mr-2 h-4 w-4" />
@@ -612,7 +666,11 @@ export default function ServiceCallDetailPage({
                 )}
               </div>
             ) : (
-              <TaskListView tasks={tasks} />
+              <TaskListView
+                tasks={taskData}
+                taskGroups={taskGroups}
+                onTaskClick={handleTaskClick}
+              />
             )}
           </CardContent>
         </Card>
@@ -631,7 +689,18 @@ export default function ServiceCallDetailPage({
         onOpenChange={setTaskSheetOpen}
         onTaskUpdate={handleTaskUpdate}
         employees={mockEmployees}
+        taskGroups={taskGroups}
       />
+
+      {/* Edit Group Dialog */}
+      {editingGroup && (
+        <TaskGroupDialog
+          serviceCallId={serviceCall.id}
+          existingGroup={editingGroup}
+          onGroupUpdate={handleUpdateGroup}
+          trigger={<span />}
+        />
+      )}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import {
   Calendar,
   Clock,
   Edit2,
+  FolderOpen,
   MapPin,
   Package,
   Plus,
@@ -42,6 +43,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 
 import {
   type Task,
+  type TaskGroup,
   type TimeEntry,
   type Material,
   type Employee,
@@ -55,7 +57,9 @@ interface TaskDetailSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onTaskUpdate?: (task: Task) => void;
+  onGroupChange?: (task: Task, newGroupId: string | null) => void;
   employees?: Employee[];
+  taskGroups?: TaskGroup[];
 }
 
 export function TaskDetailSheet({
@@ -63,7 +67,9 @@ export function TaskDetailSheet({
   open,
   onOpenChange,
   onTaskUpdate,
+  onGroupChange,
   employees = mockEmployees,
+  taskGroups = [],
 }: TaskDetailSheetProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedTask, setEditedTask] = useState<Task | null>(null);
@@ -288,6 +294,52 @@ export function TaskDetailSheet({
                   </Badge>
                 )}
               </div>
+
+              {/* Task Group */}
+              {taskGroups.length > 0 && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2">
+                    <FolderOpen className="h-4 w-4" />
+                    Task Group
+                  </label>
+                  {isEditing ? (
+                    <Select
+                      value={
+                        taskGroups.find((g) =>
+                          g.tasks.some((t) => t.id === currentTask.id)
+                        )?.id || "none"
+                      }
+                      onValueChange={(v) => {
+                        const newGroupId = v === "none" ? null : v;
+                        onGroupChange?.(currentTask, newGroupId);
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select group" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">
+                          <span className="text-muted-foreground">Ungrouped</span>
+                        </SelectItem>
+                        {taskGroups.map((group) => (
+                          <SelectItem key={group.id} value={group.id}>
+                            <div className="flex items-center gap-2">
+                              <FolderOpen className="h-3 w-3 text-muted-foreground" />
+                              {group.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <p className="text-sm">
+                      {taskGroups.find((g) =>
+                        g.tasks.some((t) => t.id === currentTask.id)
+                      )?.name || "Ungrouped"}
+                    </p>
+                  )}
+                </div>
+              )}
 
               {/* Description */}
               <div className="space-y-2">
