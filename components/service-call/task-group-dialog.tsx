@@ -71,7 +71,6 @@ export function TaskGroupDialog({
         id: `tg-${Date.now()}`,
         name: data.name,
         serviceCallId,
-        tasks: [],
       };
       onGroupCreate?.(newGroup);
     }

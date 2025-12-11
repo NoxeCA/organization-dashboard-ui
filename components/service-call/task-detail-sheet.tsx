@@ -40,6 +40,17 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 import {
   type Task,
@@ -58,6 +69,7 @@ interface TaskDetailSheetProps {
   onOpenChange: (open: boolean) => void;
   onTaskUpdate?: (task: Task) => void;
   onGroupChange?: (task: Task, newGroupId: string | null) => void;
+  onTaskDelete?: (taskId: string) => void;
   employees?: Employee[];
   taskGroups?: TaskGroup[];
 }
@@ -68,6 +80,7 @@ export function TaskDetailSheet({
   onOpenChange,
   onTaskUpdate,
   onGroupChange,
+  onTaskDelete,
   employees = mockEmployees,
   taskGroups = [],
 }: TaskDetailSheetProps) {
@@ -233,10 +246,39 @@ export function TaskDetailSheet({
                   </Button>
                 </>
               ) : (
-                <Button size="sm" variant="outline" onClick={handleEdit}>
-                  <Edit2 className="h-4 w-4 mr-1" />
-                  Edit
-                </Button>
+                <>
+                  <Button size="sm" variant="outline" onClick={handleEdit}>
+                    <Edit2 className="h-4 w-4 mr-1" />
+                    Edit
+                  </Button>
+                  {onTaskDelete && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button size="sm" variant="outline" className="text-destructive hover:text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Task</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete "{task.name}"? This action cannot be undone.
+                            All time entries and materials associated with this task will be lost.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => onTaskDelete(task.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete Task
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -304,11 +346,7 @@ export function TaskDetailSheet({
                   </label>
                   {isEditing ? (
                     <Select
-                      value={
-                        taskGroups.find((g) =>
-                          g.tasks.some((t) => t.id === currentTask.id)
-                        )?.id || "none"
-                      }
+                      value={currentTask.groupId || "none"}
                       onValueChange={(v) => {
                         const newGroupId = v === "none" ? null : v;
                         onGroupChange?.(currentTask, newGroupId);
@@ -333,9 +371,7 @@ export function TaskDetailSheet({
                     </Select>
                   ) : (
                     <p className="text-sm">
-                      {taskGroups.find((g) =>
-                        g.tasks.some((t) => t.id === currentTask.id)
-                      )?.name || "Ungrouped"}
+                      {taskGroups.find((g) => g.id === currentTask.groupId)?.name || "Ungrouped"}
                     </p>
                   )}
                 </div>

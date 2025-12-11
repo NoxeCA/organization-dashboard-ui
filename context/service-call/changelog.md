@@ -1,5 +1,36 @@
 # Service Call Domain - Changelog
 
+## Iteration 3 - 2025-12-03
+
+### Added
+- **Task deletion** - Delete button with AlertDialog confirmation in TaskDetailSheet
+- **Task group deletion** - Manage groups dropdown with delete option next to group filter
+- **Centralized group color system** - `getGroupColor()` function and `GROUP_COLOR_PALETTE` in types file
+- **AlertDialog component** - Added shadcn alert-dialog for all deletion confirmations
+
+### Changed
+- **Simplified Task-Group relationship** - Task now has direct `groupId` field instead of being nested in TaskGroup.tasks[]
+- **TaskGroup type simplified** - Removed `tasks: Task[]` array; groups are now lookup entities only
+- **Group colors are hash-based** - Dynamically created groups get consistent colors without manual assignment
+- **State management simplified** - Finding a task's group is now a simple lookup by `groupId` instead of searching through nested arrays
+- Refactored `app/service-call/[id]/page.tsx` to use new `groupId` approach
+- Updated `task-card.tsx` to import centralized `getGroupColor()`
+- Updated `task-detail-sheet.tsx` to use `task.groupId` for group selection
+- Updated mock data to use `groupId` on tasks
+
+### Removed
+- Duplicate `GROUP_COLORS` constant from `task-card.tsx` (now centralized)
+- `findTaskGroup()` helper function (no longer needed)
+- `tasks: Task[]` array from `TaskGroup` interface
+
+### Decisions
+- Tasks are ungrouped (not deleted) when their group is deleted - preserves work
+- Used AlertDialog pattern for all destructive actions to prevent accidents
+- Hash-based group colors ensure same group ID always gets same color across sessions
+- Custom color field on TaskGroup allows override if needed in future
+
+---
+
 ## Iteration 2 - 2025-12-03
 
 ### Added

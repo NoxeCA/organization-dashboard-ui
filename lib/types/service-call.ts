@@ -77,6 +77,7 @@ export interface Task {
   status: TaskStatus;
   serviceCallId?: string;
   projectId?: string;
+  groupId?: string; // Reference to TaskGroup.id
   siteId: string;
   site?: Site;
   assignedEmployees: Employee[];
@@ -153,9 +154,9 @@ export interface ServiceCall {
 export interface TaskGroup {
   id: string;
   name: string;
+  color?: string; // Optional custom color, otherwise uses getGroupColor
   serviceCallId?: string;
   projectId?: string;
-  tasks: Task[];
 }
 
 export interface ServiceCallSummary {
@@ -188,3 +189,33 @@ export const PRIORITIES: { id: Priority; name: string; color: string }[] = [
   { id: "high", name: "High", color: "bg-orange-500" },
   { id: "urgent", name: "Urgent", color: "bg-red-500" },
 ];
+
+// Predefined group colors palette
+export const GROUP_COLOR_PALETTE = [
+  "bg-blue-500",
+  "bg-orange-500",
+  "bg-purple-500",
+  "bg-emerald-500",
+  "bg-pink-500",
+  "bg-cyan-500",
+  "bg-amber-500",
+  "bg-indigo-500",
+  "bg-rose-500",
+  "bg-teal-500",
+];
+
+// Get a consistent color for a group based on its ID
+export function getGroupColor(groupId: string, customColor?: string): string {
+  if (customColor) return customColor;
+
+  // Generate a hash from the groupId to get a consistent index
+  let hash = 0;
+  for (let i = 0; i < groupId.length; i++) {
+    const char = groupId.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32bit integer
+  }
+
+  const index = Math.abs(hash) % GROUP_COLOR_PALETTE.length;
+  return GROUP_COLOR_PALETTE[index];
+}

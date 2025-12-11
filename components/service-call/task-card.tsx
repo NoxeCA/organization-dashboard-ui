@@ -27,20 +27,8 @@ import {
   type TaskGroup,
   type TaskStatus,
   TASK_STATUSES,
+  getGroupColor,
 } from "@/lib/types/service-call";
-
-// Group color mapping for badges
-const GROUP_COLORS: Record<string, string> = {
-  "tg-diag": "bg-blue-500",
-  "tg-repair": "bg-orange-500",
-  "tg-config": "bg-purple-500",
-  "tg-1": "bg-emerald-500",
-  "tg-2": "bg-pink-500",
-};
-
-function getGroupColor(groupId: string): string {
-  return GROUP_COLORS[groupId] || "bg-slate-500";
-}
 
 interface TaskCardProps {
   task: Task;
@@ -74,7 +62,7 @@ export function TaskCard({
       <div className="space-y-1.5">
         {group && (
           <div className="flex items-center gap-1.5">
-            <span className={`h-2 w-2 rounded-full ${getGroupColor(group.id)}`} />
+            <span className={`h-2 w-2 rounded-full ${getGroupColor(group.id, group.color)}`} />
             <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
               {group.name}
             </span>
@@ -212,10 +200,3 @@ export function TaskCard({
   );
 }
 
-// Helper function to find which group a task belongs to
-export function findTaskGroup(
-  task: Task,
-  taskGroups: TaskGroup[]
-): TaskGroup | null {
-  return taskGroups.find((g) => g.tasks.some((t) => t.id === task.id)) || null;
-}

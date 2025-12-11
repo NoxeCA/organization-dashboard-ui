@@ -18,6 +18,7 @@ import {
   MoreHorizontal,
   Package,
   Plus,
+  Trash2,
   User,
 } from "lucide-react";
 
@@ -49,6 +50,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 
 import {
@@ -60,11 +72,12 @@ import { TaskDialog } from "@/components/service-call/task-dialog";
 import { TaskDetailSheet } from "@/components/service-call/task-detail-sheet";
 import { CommunicationThread } from "@/components/service-call/communication-thread";
 import { TaskGroupDialog } from "@/components/service-call/task-group-dialog";
-import { TaskCard, findTaskGroup } from "@/components/service-call/task-card";
+import { TaskCard } from "@/components/service-call/task-card";
 import {
   SERVICE_CALL_STATUSES,
   TASK_STATUSES,
   PRIORITIES,
+  getGroupColor,
   type ServiceCall,
   type Task,
   type TaskGroup,
@@ -106,17 +119,10 @@ const getPriorityBadge = (priority: Priority) => {
   );
 };
 
-// Group color mapping
-const GROUP_COLORS: Record<string, string> = {
-  "tg-diag": "bg-blue-500",
-  "tg-repair": "bg-orange-500",
-  "tg-config": "bg-purple-500",
-  "tg-1": "bg-emerald-500",
-  "tg-2": "bg-pink-500",
-};
-
-function getGroupColor(groupId: string): string {
-  return GROUP_COLORS[groupId] || "bg-slate-500";
+// Helper to find group by ID
+function findGroupById(groupId: string | undefined, taskGroups: TaskGroup[]): TaskGroup | undefined {
+  if (!groupId) return undefined;
+  return taskGroups.find((g) => g.id === groupId);
 }
 
 // Task table view
@@ -137,8 +143,8 @@ function TaskTableView({
   const filteredTasks = groupFilter === "all"
     ? tasks
     : groupFilter === "ungrouped"
-      ? tasks.filter(t => !findTaskGroup(t, taskGroups))
-      : tasks.filter(t => findTaskGroup(t, taskGroups)?.id === groupFilter);
+      ? tasks.filter(t => !t.groupId)
+      : tasks.filter(t => t.groupId === groupFilter);
 
   if (filteredTasks.length === 0) {
     return (
@@ -168,7 +174,7 @@ function TaskTableView({
         </TableHeader>
         <TableBody>
           {filteredTasks.map((task) => {
-            const group = findTaskGroup(task, taskGroups);
+            const group = findGroupById(task.groupId, taskGroups);
             const totalHours = task.timeEntries.reduce((sum, te) => sum + te.hours, 0);
             const statusConfig = TASK_STATUSES.find(s => s.id === task.status);
 
@@ -194,7 +200,7 @@ function TaskTableView({
                 <TableCell>
                   {group ? (
                     <div className="flex items-center gap-1.5">
-                      <span className={`h-2 w-2 rounded-full ${getGroupColor(group.id)}`} />
+                      <span className={`h-2 w-2 rounded-full ${getGroupColor(group.id, group.color)}`} />
                       <span className="text-xs">{group.name}</span>
                     </div>
                   ) : (
@@ -368,8 +374,8 @@ function TaskCardView({
   const filteredTasks = groupFilter === "all"
     ? tasks
     : groupFilter === "ungrouped"
-      ? tasks.filter(t => !findTaskGroup(t, taskGroups))
-      : tasks.filter(t => findTaskGroup(t, taskGroups)?.id === groupFilter);
+      ? tasks.filter(t => !t.groupId)
+      : tasks.filter(t => t.groupId === groupFilter);
 
   // Group tasks by status
   const tasksByStatus = TASK_STATUSES.reduce((acc, status) => {
@@ -406,7 +412,7 @@ function TaskCardView({
             </div>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               {statusTasks.map((task) => {
-                const group = findTaskGroup(task, taskGroups);
+                const group = findGroupById(task.groupId, taskGroups);
                 return (
                   <TaskCard
                     key={task.id}
@@ -502,43 +508,37 @@ export default function ServiceCallDetailPage({
   };
 
   const handleCreateTask = (newTask: Partial<Task>, groupId?: string) => {
-    setTaskData([...taskData, newTask as Task]);
-
-    // If a group is specified, add task to that group
-    if (groupId) {
-      setTaskGroups(taskGroups.map(g => {
-        if (g.id === groupId) {
-          return {
-            ...g,
-            tasks: [...g.tasks, newTask as Task],
-          };
-        }
-        return g;
-      }));
-    }
+    // Add groupId to the task if specified
+    const taskWithGroup: Task = {
+      ...newTask as Task,
+      groupId: groupId || undefined,
+    };
+    setTaskData([...taskData, taskWithGroup]);
   };
 
   const handleGroupChange = (task: Task, newGroupId: string | null) => {
-    // Remove task from all groups first
-    const updatedGroups = taskGroups.map(g => ({
-      ...g,
-      tasks: g.tasks.filter(t => t.id !== task.id),
-    }));
-
-    // Add to new group if specified
-    if (newGroupId) {
-      setTaskGroups(updatedGroups.map(g => {
-        if (g.id === newGroupId) {
-          return {
-            ...g,
-            tasks: [...g.tasks, task],
-          };
-        }
-        return g;
-      }));
-    } else {
-      setTaskGroups(updatedGroups);
+    // Update the task's groupId directly
+    setTaskData(taskData.map(t =>
+      t.id === task.id ? { ...t, groupId: newGroupId || undefined } : t
+    ));
+    // Also update selectedTask if it's the same one
+    if (selectedTask?.id === task.id) {
+      setSelectedTask({ ...task, groupId: newGroupId || undefined });
     }
+  };
+
+  const handleDeleteTask = (taskId: string) => {
+    setTaskData(taskData.filter(t => t.id !== taskId));
+    setTaskSheetOpen(false);
+    setSelectedTask(null);
+  };
+
+  const handleDeleteGroup = (groupId: string) => {
+    // Remove group and unassign all tasks in that group
+    setTaskGroups(taskGroups.filter(g => g.id !== groupId));
+    setTaskData(taskData.map(t =>
+      t.groupId === groupId ? { ...t, groupId: undefined } : t
+    ));
   };
 
   const currentStatus = serviceCallStatus || serviceCall.status;
@@ -554,9 +554,7 @@ export default function ServiceCallDetailPage({
   );
 
   // Count ungrouped tasks
-  const ungroupedTaskCount = taskData.filter(
-    t => !findTaskGroup(t, taskGroups)
-  ).length;
+  const ungroupedTaskCount = taskData.filter(t => !t.groupId).length;
 
   return (
     <div className="min-h-screen bg-background">
@@ -728,41 +726,108 @@ export default function ServiceCallDetailPage({
               <div className="flex items-center gap-2 flex-wrap">
                 {/* Group Filter */}
                 {taskGroups.length > 0 && (
-                  <Select value={groupFilter} onValueChange={setGroupFilter}>
-                    <SelectTrigger className="w-[180px] h-8">
-                      <Filter className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
-                      <SelectValue placeholder="Filter by group" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">
-                        <div className="flex items-center gap-2">
-                          <span className="h-2 w-2 rounded-full bg-slate-400" />
-                          All Groups ({totalTasks})
-                        </div>
-                      </SelectItem>
-                      {taskGroups.map((group) => {
-                        const groupTaskCount = taskData.filter(
-                          t => findTaskGroup(t, taskGroups)?.id === group.id
-                        ).length;
-                        return (
-                          <SelectItem key={group.id} value={group.id}>
-                            <div className="flex items-center gap-2">
-                              <span className={`h-2 w-2 rounded-full ${getGroupColor(group.id)}`} />
-                              {group.name} ({groupTaskCount})
-                            </div>
-                          </SelectItem>
-                        );
-                      })}
-                      {ungroupedTaskCount > 0 && (
-                        <SelectItem value="ungrouped">
+                  <div className="flex items-center gap-1">
+                    <Select value={groupFilter} onValueChange={setGroupFilter}>
+                      <SelectTrigger className="w-[180px] h-8">
+                        <Filter className="h-3.5 w-3.5 mr-2 text-muted-foreground" />
+                        <SelectValue placeholder="Filter by group" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">
                           <div className="flex items-center gap-2">
-                            <span className="h-2 w-2 rounded-full bg-slate-300" />
-                            Ungrouped ({ungroupedTaskCount})
+                            <span className="h-2 w-2 rounded-full bg-slate-400" />
+                            All Groups ({totalTasks})
                           </div>
                         </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
+                        {taskGroups.map((group) => {
+                          const groupTaskCount = taskData.filter(
+                            t => t.groupId === group.id
+                          ).length;
+                          return (
+                            <SelectItem key={group.id} value={group.id}>
+                              <div className="flex items-center gap-2">
+                                <span className={`h-2 w-2 rounded-full ${getGroupColor(group.id, group.color)}`} />
+                                {group.name} ({groupTaskCount})
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
+                        {ungroupedTaskCount > 0 && (
+                          <SelectItem value="ungrouped">
+                            <div className="flex items-center gap-2">
+                              <span className="h-2 w-2 rounded-full bg-slate-300" />
+                              Ungrouped ({ungroupedTaskCount})
+                            </div>
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    {/* Group Management Dropdown */}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                          Manage Groups
+                        </div>
+                        <DropdownMenuSeparator />
+                        {taskGroups.map((group) => {
+                          const groupTaskCount = taskData.filter(t => t.groupId === group.id).length;
+                          return (
+                            <DropdownMenuItem
+                              key={group.id}
+                              className="flex items-center justify-between gap-4"
+                              onSelect={(e) => e.preventDefault()}
+                            >
+                              <div className="flex items-center gap-2">
+                                <span className={`h-2 w-2 rounded-full ${getGroupColor(group.id, group.color)}`} />
+                                <span className="text-sm">{group.name}</span>
+                                <span className="text-xs text-muted-foreground">({groupTaskCount})</span>
+                              </div>
+                              <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                  <AlertDialogHeader>
+                                    <AlertDialogTitle>Delete Group "{group.name}"?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                      {groupTaskCount > 0
+                                        ? `This group contains ${groupTaskCount} task${groupTaskCount > 1 ? "s" : ""}. The tasks will be moved to "Ungrouped" and will not be deleted.`
+                                        : "This group is empty and will be permanently deleted."}
+                                    </AlertDialogDescription>
+                                  </AlertDialogHeader>
+                                  <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction
+                                      onClick={() => {
+                                        handleDeleteGroup(group.id);
+                                        if (groupFilter === group.id) {
+                                          setGroupFilter("all");
+                                        }
+                                      }}
+                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                    >
+                                      Delete Group
+                                    </AlertDialogAction>
+                                  </AlertDialogFooter>
+                                </AlertDialogContent>
+                              </AlertDialog>
+                            </DropdownMenuItem>
+                          );
+                        })}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 )}
 
                 {/* View Toggle */}
@@ -863,6 +928,7 @@ export default function ServiceCallDetailPage({
         onOpenChange={setTaskSheetOpen}
         onTaskUpdate={handleTaskUpdate}
         onGroupChange={handleGroupChange}
+        onTaskDelete={handleDeleteTask}
         employees={mockEmployees}
         taskGroups={taskGroups}
       />
