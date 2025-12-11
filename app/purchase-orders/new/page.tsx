@@ -83,7 +83,7 @@ export default function NewPurchaseOrderPage() {
     try {
       const po = addPurchaseOrder({
         supplierId,
-        serviceCallId: serviceCallId || undefined,
+        serviceCallId: serviceCallId && serviceCallId !== 'none' ? serviceCallId : undefined,
         expectedDelivery: expectedDelivery || undefined,
         lineItems: lineItems.map((item) => ({
           materialName: item.materialName,
@@ -144,7 +144,7 @@ export default function NewPurchaseOrderPage() {
                       <SelectValue placeholder="Select service call" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="none">None</SelectItem>
                       {serviceCalls.map((sc) => (
                         <SelectItem key={sc.id} value={sc.id}>
                           {sc.title}
