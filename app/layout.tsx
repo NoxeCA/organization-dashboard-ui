@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { ThemeProvider } from "@/components/theme-provider";
-import { SidebarLayout } from "@/components/sidebar-layout";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Organization Management - ERP Dashboard",
-  description: "Manage your organization members, sites, and addresses",
+  title: "Next.js App",
+  description: "A fresh Next.js application",
 };
 
 export default function RootLayout({
@@ -25,20 +23,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <SidebarLayout>
-            {children}
-          </SidebarLayout>
-        </ThemeProvider>
+        {children}
       </body>
     </html>
   );
