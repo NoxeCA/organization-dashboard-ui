@@ -1,6 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react'
+import { toast } from 'sonner'
 import type {
   ServiceCall,
   Task,
@@ -19,6 +20,8 @@ import type {
   TimeEntryFormData,
   MaterialUsageFormData,
   POFormData,
+  ServiceCallStatus,
+  TaskStatus,
 } from '@/lib/types'
 import {
   serviceCalls as initialServiceCalls,
@@ -34,6 +37,7 @@ import {
   suppliers,
   customers,
 } from '@/lib/mock-data'
+import { SERVICE_CALL_TRANSITIONS, TASK_TRANSITIONS } from '@/lib/constants'
 
 interface DataContextType {
   // Reference data (read-only)
@@ -125,15 +129,66 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const updateServiceCall = useCallback((id: string, data: Partial<ServiceCall>) => {
     setServiceCalls((prev) =>
-      prev.map((sc) =>
-        sc.id === id ? { ...sc, ...data, updatedAt: new Date().toISOString() } : sc
-      )
+      prev.map((sc) => {
+        if (sc.id !== id) return sc
+
+        // Validate status transition
+        if (data.status && data.status !== sc.status) {
+          const validTransitions = SERVICE_CALL_TRANSITIONS[sc.status]
+          if (!validTransitions.includes(data.status)) {
+            toast.error(`Cannot change status from "${sc.status}" to "${data.status}". Valid transitions: ${validTransitions.length > 0 ? validTransitions.join(', ') : 'none'}`)
+            return sc // Return unchanged
+          }
+
+          // Check task completion when transitioning to 'resolved'
+          if (data.status === 'resolved') {
+            const serviceTasks = tasksState.filter(t => t.serviceCallId === id)
+            const incompleteTasks = serviceTasks.filter(t =>
+              !['completed', 'cancelled'].includes(t.status)
+            )
+
+            if (incompleteTasks.length > 0) {
+              toast.error(`Cannot resolve: ${incompleteTasks.length} task(s) still incomplete. Complete or cancel all tasks first.`)
+              return sc // Return unchanged
+            }
+          }
+        }
+
+        return { ...sc, ...data, updatedAt: new Date().toISOString() }
+      })
     )
-  }, [])
+  }, [tasksState])
 
   const deleteServiceCall = useCallback((id: string) => {
-    setServiceCalls((prev) => prev.filter((sc) => sc.id !== id))
-  }, [])
+    // Get related task IDs first
+    const relatedTaskIds = tasksState
+      .filter(t => t.serviceCallId === id)
+      .map(t => t.id)
+
+    // Delete time entries for those tasks
+    setTimeEntries(prev => prev.filter(te => !relatedTaskIds.includes(te.taskId)))
+
+    // Delete materials for those tasks
+    setMaterialUsages(prev => prev.filter(mu => !relatedTaskIds.includes(mu.taskId)))
+
+    // Delete tasks
+    setTasks(prev => prev.filter(t => t.serviceCallId !== id))
+
+    // Delete related purchase orders
+    setPurchaseOrders(prev => prev.filter(po => po.serviceCallId !== id))
+
+    // Delete related invoices and their line items
+    const relatedInvoiceIds = invoicesState
+      .filter(inv => inv.serviceCallId === id)
+      .map(inv => inv.id)
+    setInvoiceLineItems(prev => prev.filter(li => !relatedInvoiceIds.includes(li.invoiceId)))
+    setInvoices(prev => prev.filter(inv => inv.serviceCallId !== id))
+
+    // Finally delete the service call
+    setServiceCalls(prev => prev.filter(sc => sc.id !== id))
+
+    toast.success('Service call and all related records deleted')
+  }, [tasksState, invoicesState])
 
   const getServiceCall = useCallback(
     (id: string) => serviceCallsState.find((sc) => sc.id === id),
@@ -156,14 +211,22 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const updateTask = useCallback((id: string, data: Partial<Task>) => {
     setTasks((prev) =>
       prev.map((task) => {
-        if (task.id === id) {
-          const updated = { ...task, ...data }
-          if (data.status === 'completed' && !task.completedAt) {
-            updated.completedAt = new Date().toISOString()
+        if (task.id !== id) return task
+
+        // Validate status transition
+        if (data.status && data.status !== task.status) {
+          const validTransitions = TASK_TRANSITIONS[task.status]
+          if (!validTransitions.includes(data.status as TaskStatus)) {
+            toast.error(`Cannot change task status from "${task.status}" to "${data.status}". Valid transitions: ${validTransitions.length > 0 ? validTransitions.join(', ') : 'none (terminal state)'}`)
+            return task // Return unchanged
           }
-          return updated
         }
-        return task
+
+        const updated = { ...task, ...data }
+        if (data.status === 'completed' && !task.completedAt) {
+          updated.completedAt = new Date().toISOString()
+        }
+        return updated
       })
     )
   }, [])

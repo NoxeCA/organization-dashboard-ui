@@ -55,9 +55,10 @@ export function MaterialDialog({ open, onOpenChange, task }: MaterialDialogProps
   const { addMaterialUsage, purchaseOrders, getServiceCall } = useData()
 
   // Get service call to filter relevant purchase orders
+  // Only show approved or received POs for material linking
   const serviceCall = getServiceCall(task.serviceCallId)
   const relevantPOs = purchaseOrders.filter(
-    po => po.serviceCallId === task.serviceCallId && po.status !== 'cancelled'
+    po => po.serviceCallId === task.serviceCallId && ['approved', 'received'].includes(po.status)
   )
 
   const form = useForm<MaterialFormValues>({

@@ -12,6 +12,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
   Table,
   TableBody,
   TableCell,
@@ -23,7 +33,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { useData } from '@/context/data-context'
-import { formatCurrency, RATE_MULTIPLIERS } from '@/lib/constants'
+import { formatCurrency, RATE_MULTIPLIERS, LOW_INVOICE_THRESHOLD } from '@/lib/constants'
 import { toast } from 'sonner'
 import { FileText, Plus } from 'lucide-react'
 import type { InvoiceLineItem, InvoiceLineType } from '@/lib/types'
@@ -46,6 +56,7 @@ interface BillableItem {
 export function InvoiceGenerator({ serviceCallId }: InvoiceGeneratorProps) {
   const router = useRouter()
   const {
+    getServiceCall,
     getTasksForServiceCall,
     getTimeEntriesForTask,
     getMaterialsForTask,
@@ -54,11 +65,14 @@ export function InvoiceGenerator({ serviceCallId }: InvoiceGeneratorProps) {
   } = useData()
 
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [lowAmountDialogOpen, setLowAmountDialogOpen] = useState(false)
   const [items, setItems] = useState<BillableItem[]>([])
 
   // Initialize items when dialog opens
   const initializeItems = () => {
+    // Only include completed tasks
     const tasks = getTasksForServiceCall(serviceCallId)
+      .filter(t => t.status === 'completed')
     const billableItems: BillableItem[] = []
 
     tasks.forEach((task) => {
@@ -84,10 +98,10 @@ export function InvoiceGenerator({ serviceCallId }: InvoiceGeneratorProps) {
           })
         })
 
-      // Get materials for this task
+      // Get materials for this task (exclude customer-provided materials)
       const materials = getMaterialsForTask(task.id)
       materials
-        .filter((m) => m.unitCost && m.unitCost > 0)
+        .filter((m) => m.unitCost && m.unitCost > 0 && m.source !== 'customer_provided')
         .forEach((m) => {
           billableItems.push({
             id: m.id,
@@ -106,6 +120,29 @@ export function InvoiceGenerator({ serviceCallId }: InvoiceGeneratorProps) {
   }
 
   const handleOpen = () => {
+    // Get service call to check status
+    const serviceCall = getServiceCall(serviceCallId)
+
+    if (!serviceCall) {
+      toast.error('Service call not found')
+      return
+    }
+
+    // Only allow invoicing for resolved or invoiced service calls
+    if (!['resolved', 'invoiced'].includes(serviceCall.status)) {
+      toast.error('Service call must be resolved before generating an invoice')
+      return
+    }
+
+    // Check that there are completed tasks
+    const tasks = getTasksForServiceCall(serviceCallId)
+    const completedTasks = tasks.filter(t => t.status === 'completed')
+
+    if (completedTasks.length === 0) {
+      toast.error('No completed tasks to invoice')
+      return
+    }
+
     initializeItems()
     setDialogOpen(true)
   }
@@ -126,9 +163,15 @@ export function InvoiceGenerator({ serviceCallId }: InvoiceGeneratorProps) {
   const taxAmount = useMemo(() => subtotal * 0.09, [subtotal]) // 9% tax
   const total = useMemo(() => subtotal + taxAmount, [subtotal, taxAmount])
 
-  const handleGenerateInvoice = () => {
+  const handleGenerateInvoice = (skipWarning: boolean = false) => {
     if (selectedItems.length === 0) {
       toast.error('Please select at least one item to invoice')
+      return
+    }
+
+    // Check for low invoice total
+    if (!skipWarning && total < LOW_INVOICE_THRESHOLD) {
+      setLowAmountDialogOpen(true)
       return
     }
 
@@ -145,6 +188,7 @@ export function InvoiceGenerator({ serviceCallId }: InvoiceGeneratorProps) {
       const invoice = addInvoice(serviceCallId, lineItems)
       toast.success('Invoice generated successfully')
       setDialogOpen(false)
+      setLowAmountDialogOpen(false)
       router.push(`/invoices/${invoice.id}`)
     } catch (error) {
       toast.error('Failed to generate invoice')
@@ -250,13 +294,31 @@ export function InvoiceGenerator({ serviceCallId }: InvoiceGeneratorProps) {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleGenerateInvoice} disabled={selectedItems.length === 0}>
+            <Button onClick={() => handleGenerateInvoice()} disabled={selectedItems.length === 0}>
               <FileText className="mr-2 h-4 w-4" />
               Generate Invoice
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Low Amount Warning Dialog */}
+      <AlertDialog open={lowAmountDialogOpen} onOpenChange={setLowAmountDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Low Invoice Amount</AlertDialogTitle>
+            <AlertDialogDescription>
+              The invoice total is only {formatCurrency(total)}, which is below the typical minimum of {formatCurrency(LOW_INVOICE_THRESHOLD)}. Are you sure you want to proceed?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => handleGenerateInvoice(true)}>
+              Proceed Anyway
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }

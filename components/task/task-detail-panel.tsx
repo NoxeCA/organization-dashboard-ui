@@ -34,8 +34,8 @@ import {
 import { useData } from '@/context/data-context'
 import { TimeEntryDialog } from './time-entry-dialog'
 import { MaterialDialog } from './material-dialog'
-import { formatCurrency, formatDate, TASK_STATUS_OPTIONS, RATE_TYPE_OPTIONS, RATE_MULTIPLIERS } from '@/lib/constants'
-import type { Task, TimeEntry, MaterialUsage } from '@/lib/types'
+import { formatCurrency, formatDate, TASK_STATUS_OPTIONS, TASK_TRANSITIONS, RATE_TYPE_OPTIONS, RATE_MULTIPLIERS } from '@/lib/constants'
+import type { Task, TimeEntry, MaterialUsage, TaskStatus } from '@/lib/types'
 import { ChevronDown, Clock, Package, Plus, Trash2 } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 
@@ -93,7 +93,20 @@ export function TaskDetailPanel({ task, isOpen, onToggle }: TaskDetailPanelProps
     return sum + (mat.unitCost ? mat.quantity * mat.unitCost : 0)
   }, 0)
 
+  // Check if task is active (can have time/materials added)
+  const isTaskActive = ['todo', 'in_progress'].includes(task.status)
+
+  // Get valid status transitions for this task
+  const validTransitions = TASK_TRANSITIONS[task.status]
+  const availableStatusOptions = TASK_STATUS_OPTIONS.filter(
+    option => option.value === task.status || validTransitions.includes(option.value as TaskStatus)
+  )
+
   const handleStatusChange = (newStatus: string) => {
+    if (!validTransitions.includes(newStatus as TaskStatus)) {
+      toast.error(`Cannot change task from "${task.status}" to "${newStatus}"`)
+      return
+    }
     updateTask(task.id, { status: newStatus as Task['status'] })
     toast.success('Task status updated')
   }
@@ -131,13 +144,21 @@ export function TaskDetailPanel({ task, isOpen, onToggle }: TaskDetailPanelProps
           <div className="space-y-3">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-semibold">Status</h4>
-              <Select value={task.status} onValueChange={handleStatusChange}>
+              <Select
+                value={task.status}
+                onValueChange={handleStatusChange}
+                disabled={validTransitions.length === 0}
+              >
                 <SelectTrigger className="w-[180px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {TASK_STATUS_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
+                  {availableStatusOptions.map((option) => (
+                    <SelectItem
+                      key={option.value}
+                      value={option.value}
+                      disabled={option.value === task.status}
+                    >
                       {option.label}
                     </SelectItem>
                   ))}
@@ -181,7 +202,12 @@ export function TaskDetailPanel({ task, isOpen, onToggle }: TaskDetailPanelProps
                   </Badge>
                 )}
               </div>
-              <Button size="sm" onClick={() => setTimeDialogOpen(true)}>
+              <Button
+                size="sm"
+                onClick={() => setTimeDialogOpen(true)}
+                disabled={!isTaskActive}
+                title={!isTaskActive ? `Cannot add time to ${task.status} task` : undefined}
+              >
                 <Plus className="h-4 w-4 mr-1" />
                 Add Time
               </Button>
@@ -253,7 +279,12 @@ export function TaskDetailPanel({ task, isOpen, onToggle }: TaskDetailPanelProps
                   </Badge>
                 )}
               </div>
-              <Button size="sm" onClick={() => setMaterialDialogOpen(true)}>
+              <Button
+                size="sm"
+                onClick={() => setMaterialDialogOpen(true)}
+                disabled={!isTaskActive}
+                title={!isTaskActive ? `Cannot add material to ${task.status} task` : undefined}
+              >
                 <Plus className="h-4 w-4 mr-1" />
                 Add Material
               </Button>

@@ -37,6 +37,7 @@ import { InvoiceGenerator } from '@/components/invoice/invoice-generator'
 import { useData } from '@/context/data-context'
 import {
   SERVICE_CALL_STATUS_OPTIONS,
+  SERVICE_CALL_TRANSITIONS,
   PRIORITY_OPTIONS,
   ISSUE_TYPE_OPTIONS,
   formatDate,
@@ -460,28 +461,48 @@ export default function ServiceCallDetailPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="status">New Status</Label>
-              <Select
-                value={selectedStatus}
-                onValueChange={(value) => setSelectedStatus(value as ServiceCallStatus)}
-              >
-                <SelectTrigger id="status">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {SERVICE_CALL_STATUS_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {SERVICE_CALL_TRANSITIONS[serviceCall.status].length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  This service call is in a terminal state and cannot be changed.
+                </p>
+              ) : (
+                <Select
+                  value={selectedStatus}
+                  onValueChange={(value) => setSelectedStatus(value as ServiceCallStatus)}
+                >
+                  <SelectTrigger id="status">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SERVICE_CALL_STATUS_OPTIONS
+                      .filter((option) =>
+                        option.value === serviceCall.status ||
+                        SERVICE_CALL_TRANSITIONS[serviceCall.status].includes(option.value)
+                      )
+                      .map((option) => (
+                        <SelectItem
+                          key={option.value}
+                          value={option.value}
+                          disabled={option.value === serviceCall.status}
+                        >
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setStatusDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleStatusUpdate}>Update Status</Button>
+            <Button
+              onClick={handleStatusUpdate}
+              disabled={SERVICE_CALL_TRANSITIONS[serviceCall.status].length === 0}
+            >
+              Update Status
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

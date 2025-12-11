@@ -18,6 +18,15 @@ export const SERVICE_CALL_STATUS_OPTIONS: { value: ServiceCallStatus; label: str
   { value: 'closed', label: 'Closed' },
 ]
 
+// Service Call Status Transitions - defines valid status changes
+export const SERVICE_CALL_TRANSITIONS: Record<ServiceCallStatus, ServiceCallStatus[]> = {
+  open: ['in_progress'],
+  in_progress: ['resolved', 'open'],
+  resolved: ['invoiced', 'in_progress'],
+  invoiced: ['closed'],
+  closed: [],
+}
+
 export const SERVICE_CALL_STATUS_COLORS: Record<ServiceCallStatus, string> = {
   open: 'bg-blue-500 text-white',
   in_progress: 'bg-yellow-500 text-white',
@@ -48,6 +57,14 @@ export const TASK_STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
   { value: 'completed', label: 'Completed' },
   { value: 'cancelled', label: 'Cancelled' },
 ]
+
+// Task Status Transitions - defines valid status changes
+export const TASK_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
+  todo: ['in_progress', 'cancelled'],
+  in_progress: ['completed', 'todo', 'cancelled'],
+  completed: [],  // Terminal state
+  cancelled: [],  // Terminal state
+}
 
 export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
   todo: 'bg-gray-400 text-white',
@@ -159,3 +176,9 @@ export function formatDateTime(dateString: string): string {
     minute: '2-digit',
   })
 }
+
+// Tax Configuration
+export const DEFAULT_TAX_RATE = 0.09
+
+// Invoice warning threshold
+export const LOW_INVOICE_THRESHOLD = 100

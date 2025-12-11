@@ -1,13 +1,24 @@
 'use client'
 
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { TaskCard } from '@/components/task/task-card'
 import { TaskDialog } from '@/components/task/task-dialog'
 import { TaskDetailPanel } from '@/components/task/task-detail-panel'
 import { useData } from '@/context/data-context'
-import { Plus, CheckCircle2, Circle, Clock, XCircle } from 'lucide-react'
+import { Plus, CheckCircle2, Circle, Clock, XCircle, CheckCheck } from 'lucide-react'
 import type { Task, TaskStatus } from '@/lib/types'
 
 interface TaskSectionProps {
@@ -15,11 +26,15 @@ interface TaskSectionProps {
 }
 
 export function TaskSection({ serviceCallId }: TaskSectionProps) {
-  const { getTasksForServiceCall } = useData()
+  const { getTasksForServiceCall, updateTask } = useData()
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [expandedTaskId, setExpandedTaskId] = useState<string | null>(null)
+  const [completeAllDialogOpen, setCompleteAllDialogOpen] = useState(false)
 
   const tasks = getTasksForServiceCall(serviceCallId)
+
+  // Get tasks that can be completed (todo or in_progress)
+  const incompleteTasks = tasks.filter(t => ['todo', 'in_progress'].includes(t.status))
 
   // Calculate status summary
   const statusCounts = tasks.reduce(
@@ -34,6 +49,21 @@ export function TaskSection({ serviceCallId }: TaskSectionProps) {
     setExpandedTaskId(expandedTaskId === taskId ? null : taskId)
   }
 
+  const handleCompleteAllTasks = () => {
+    // First move all 'todo' tasks to 'in_progress', then to 'completed'
+    incompleteTasks.forEach(task => {
+      if (task.status === 'todo') {
+        // Move to in_progress first
+        updateTask(task.id, { status: 'in_progress' })
+      }
+      // Then move to completed
+      updateTask(task.id, { status: 'completed' })
+    })
+
+    toast.success(`${incompleteTasks.length} task(s) marked as completed`)
+    setCompleteAllDialogOpen(false)
+  }
+
   return (
     <div className="space-y-4">
       {/* Header with Summary */}
@@ -42,10 +72,18 @@ export function TaskSection({ serviceCallId }: TaskSectionProps) {
           <h3 className="text-lg font-semibold">Tasks</h3>
           <Badge variant="secondary">{tasks.length} Total</Badge>
         </div>
-        <Button onClick={() => setCreateDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-1" />
-          Add Task
-        </Button>
+        <div className="flex gap-2">
+          {incompleteTasks.length > 0 && (
+            <Button variant="outline" onClick={() => setCompleteAllDialogOpen(true)}>
+              <CheckCheck className="h-4 w-4 mr-1" />
+              Complete All
+            </Button>
+          )}
+          <Button onClick={() => setCreateDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-1" />
+            Add Task
+          </Button>
+        </div>
       </div>
 
       {/* Status Summary */}
@@ -126,6 +164,29 @@ export function TaskSection({ serviceCallId }: TaskSectionProps) {
         onOpenChange={setCreateDialogOpen}
         serviceCallId={serviceCallId}
       />
+
+      {/* Complete All Tasks Confirmation Dialog */}
+      <AlertDialog open={completeAllDialogOpen} onOpenChange={setCompleteAllDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Complete All Tasks?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will mark {incompleteTasks.length} task(s) as completed. This action will:
+              <ul className="list-disc list-inside mt-2 space-y-1">
+                <li>Move all "To Do" tasks through "In Progress" to "Completed"</li>
+                <li>Move all "In Progress" tasks to "Completed"</li>
+              </ul>
+              <p className="mt-2">Are you sure you want to continue?</p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCompleteAllTasks}>
+              Complete All Tasks
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
