@@ -24,7 +24,7 @@ import {
 import { StatusBadge, PriorityBadge } from '@/components/service-call/status-badge'
 import { useData } from '@/context/data-context'
 import { SERVICE_CALL_STATUS_OPTIONS, PRIORITY_OPTIONS, formatDate } from '@/lib/constants'
-import { Plus, Search } from 'lucide-react'
+import { Plus, Search, ClipboardList } from 'lucide-react'
 import type { ServiceCallStatus, ServiceCallPriority } from '@/lib/types'
 
 export default function ServiceCallsPage() {
@@ -119,27 +119,48 @@ export default function ServiceCallsPage() {
           </div>
         </div>
 
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Site</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredServiceCalls.length === 0 ? (
+        <div className="rounded-md border overflow-hidden">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
-                    No service calls found.
-                  </TableCell>
+                  <TableHead className="whitespace-nowrap">ID</TableHead>
+                  <TableHead className="min-w-[200px]">Title</TableHead>
+                  <TableHead className="whitespace-nowrap">Site</TableHead>
+                  <TableHead className="whitespace-nowrap">Priority</TableHead>
+                  <TableHead className="whitespace-nowrap">Status</TableHead>
+                  <TableHead className="whitespace-nowrap">Created</TableHead>
+                  <TableHead className="text-right whitespace-nowrap">Actions</TableHead>
                 </TableRow>
-              ) : (
+              </TableHeader>
+              <TableBody>
+                {filteredServiceCalls.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-48">
+                      <div className="flex flex-col items-center justify-center gap-3">
+                        <div className="p-4 rounded-full bg-muted">
+                          <ClipboardList className="h-8 w-8 text-muted-foreground" />
+                        </div>
+                        <div className="text-center">
+                          <p className="font-medium">No service calls found</p>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {searchQuery || statusFilter !== 'all' || priorityFilter !== 'all'
+                              ? 'Try adjusting your filters'
+                              : 'Get started by creating a new service call'}
+                          </p>
+                        </div>
+                        {!searchQuery && statusFilter === 'all' && priorityFilter === 'all' && (
+                          <Button asChild size="sm" className="mt-2">
+                            <Link href="/service-calls/new">
+                              <Plus className="mr-2 h-4 w-4" />
+                              Create Service Call
+                            </Link>
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : (
                 filteredServiceCalls.map((sc) => (
                   <TableRow
                     key={sc.id}
@@ -178,8 +199,9 @@ export default function ServiceCallsPage() {
                   </TableRow>
                 ))
               )}
-            </TableBody>
-          </Table>
+              </TableBody>
+            </Table>
+          </div>
         </div>
 
         <div className="text-sm text-muted-foreground">

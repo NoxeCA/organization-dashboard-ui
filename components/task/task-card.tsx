@@ -3,10 +3,12 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Progress } from '@/components/ui/progress'
 import { useData } from '@/context/data-context'
 import { TASK_STATUS_COLORS } from '@/lib/constants'
 import type { Task } from '@/lib/types'
 import { Clock, Package } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface TaskCardProps {
   task: Task
@@ -98,14 +100,26 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
           </div>
         </div>
 
-        {task.estimatedHours && (
-          <div className="mt-3 text-xs text-muted-foreground">
-            Estimated: {task.estimatedHours}h
-            {totalHours > 0 && (
-              <span className={totalHours > task.estimatedHours ? 'text-orange-500 ml-1' : 'text-green-500 ml-1'}>
-                ({totalHours > task.estimatedHours ? '+' : ''}{(totalHours - task.estimatedHours).toFixed(1)}h)
+        {task.estimatedHours && task.estimatedHours > 0 && (
+          <div className="mt-3 space-y-1">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">
+                {totalHours.toFixed(1)}h / {task.estimatedHours}h
               </span>
-            )}
+              <span className={cn(
+                "font-medium",
+                totalHours > task.estimatedHours ? 'text-orange-600 dark:text-orange-400' : 'text-muted-foreground'
+              )}>
+                {Math.round((totalHours / task.estimatedHours) * 100)}%
+              </span>
+            </div>
+            <Progress
+              value={Math.min((totalHours / task.estimatedHours) * 100, 100)}
+              className={cn(
+                "h-1.5",
+                totalHours > task.estimatedHours && "[&>div]:bg-orange-500"
+              )}
+            />
           </div>
         )}
       </CardContent>

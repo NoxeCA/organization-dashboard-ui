@@ -28,11 +28,11 @@ export const SERVICE_CALL_TRANSITIONS: Record<ServiceCallStatus, ServiceCallStat
 }
 
 export const SERVICE_CALL_STATUS_COLORS: Record<ServiceCallStatus, string> = {
-  open: 'bg-blue-500 text-white',
-  in_progress: 'bg-yellow-500 text-white',
-  resolved: 'bg-green-500 text-white',
-  invoiced: 'bg-purple-500 text-white',
-  closed: 'bg-gray-500 text-white',
+  open: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+  in_progress: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+  resolved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+  invoiced: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+  closed: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400',
 }
 
 // Priority
@@ -44,10 +44,10 @@ export const PRIORITY_OPTIONS: { value: ServiceCallPriority; label: string }[] =
 ]
 
 export const PRIORITY_COLORS: Record<ServiceCallPriority, string> = {
-  low: 'bg-gray-400 text-white',
-  medium: 'bg-blue-500 text-white',
-  high: 'bg-orange-500 text-white',
-  critical: 'bg-red-500 text-white',
+  low: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+  medium: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+  high: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
+  critical: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
 }
 
 // Task Status
@@ -67,10 +67,10 @@ export const TASK_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
 }
 
 export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
-  todo: 'bg-gray-400 text-white',
-  in_progress: 'bg-blue-500 text-white',
-  completed: 'bg-green-500 text-white',
-  cancelled: 'bg-red-500 text-white',
+  todo: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+  in_progress: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+  completed: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+  cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
 }
 
 // Rate Types
@@ -105,11 +105,11 @@ export const PO_STATUS_OPTIONS: { value: POStatus; label: string }[] = [
 ]
 
 export const PO_STATUS_COLORS: Record<POStatus, string> = {
-  draft: 'bg-gray-400 text-white',
-  submitted: 'bg-blue-500 text-white',
-  approved: 'bg-green-500 text-white',
-  received: 'bg-purple-500 text-white',
-  cancelled: 'bg-red-500 text-white',
+  draft: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+  submitted: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+  approved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+  received: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+  cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
 }
 
 // Invoice Status
@@ -122,11 +122,11 @@ export const INVOICE_STATUS_OPTIONS: { value: InvoiceStatus; label: string }[] =
 ]
 
 export const INVOICE_STATUS_COLORS: Record<InvoiceStatus, string> = {
-  draft: 'bg-gray-400 text-white',
-  sent: 'bg-blue-500 text-white',
-  paid: 'bg-green-500 text-white',
-  overdue: 'bg-orange-500 text-white',
-  cancelled: 'bg-red-500 text-white',
+  draft: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+  sent: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+  paid: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
+  overdue: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
+  cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
 }
 
 // Issue Types

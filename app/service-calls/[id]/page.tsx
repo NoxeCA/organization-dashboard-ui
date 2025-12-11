@@ -46,8 +46,9 @@ import {
   INVOICE_STATUS_COLORS,
 } from '@/lib/constants'
 import { toast } from 'sonner'
-import { Pencil, FileText, Calendar, User, MapPin, AlertCircle } from 'lucide-react'
+import { Pencil, FileText, Calendar, User, MapPin, AlertCircle, CheckCircle2, Clock, Package, DollarSign } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
 import type { ServiceCallStatus, ServiceCallPriority } from '@/lib/types'
 
 export default function ServiceCallDetailPage() {
@@ -137,6 +138,18 @@ export default function ServiceCallDetailPage() {
     0
   )
 
+  // Calculate task completion stats
+  const completedTasks = serviceTasks.filter((t) => t.status === 'completed').length
+  const taskCompletionPercentage = serviceTasks.length > 0
+    ? Math.round((completedTasks / serviceTasks.length) * 100)
+    : 0
+
+  // Calculate total estimated hours
+  const totalEstimatedHours = serviceTasks.reduce((sum, t) => sum + (t.estimatedHours || 0), 0)
+
+  // Calculate total invoiced amount
+  const totalInvoicedAmount = serviceInvoices.reduce((sum, inv) => sum + inv.totalAmount, 0)
+
   return (
     <div className="flex flex-1 flex-col">
       <PageHeader
@@ -182,6 +195,84 @@ export default function ServiceCallDetailPage() {
               <PriorityBadge priority={serviceCall.priority} />
             </div>
           </div>
+        </div>
+
+        {/* Summary Stats Cards */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Tasks Progress</p>
+                  <p className="text-2xl font-bold">{completedTasks}/{serviceTasks.length}</p>
+                </div>
+                <div className="p-3 rounded-full bg-primary/10">
+                  <CheckCircle2 className="h-5 w-5 text-primary" />
+                </div>
+              </div>
+              <Progress value={taskCompletionPercentage} className="mt-3 h-2" />
+              <p className="text-xs text-muted-foreground mt-1">{taskCompletionPercentage}% complete</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Hours Logged</p>
+                  <p className="text-2xl font-bold">{totalHours.toFixed(1)}h</p>
+                </div>
+                <div className="p-3 rounded-full bg-blue-500/10">
+                  <Clock className="h-5 w-5 text-blue-500" />
+                </div>
+              </div>
+              {totalEstimatedHours > 0 && (
+                <>
+                  <Progress
+                    value={Math.min((totalHours / totalEstimatedHours) * 100, 100)}
+                    className="mt-3 h-2"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {totalEstimatedHours}h estimated
+                  </p>
+                </>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Material Costs</p>
+                  <p className="text-2xl font-bold">{formatCurrency(totalMaterialCost)}</p>
+                </div>
+                <div className="p-3 rounded-full bg-orange-500/10">
+                  <Package className="h-5 w-5 text-orange-500" />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-3">
+                {relatedMaterials.length} material{relatedMaterials.length !== 1 ? 's' : ''} used
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground">Total Invoiced</p>
+                  <p className="text-2xl font-bold">{formatCurrency(totalInvoicedAmount)}</p>
+                </div>
+                <div className="p-3 rounded-full bg-green-500/10">
+                  <DollarSign className="h-5 w-5 text-green-500" />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-3">
+                {serviceInvoices.length} invoice{serviceInvoices.length !== 1 ? 's' : ''} generated
+              </p>
+            </CardContent>
+          </Card>
         </div>
 
         <Tabs defaultValue="overview" className="space-y-4">
