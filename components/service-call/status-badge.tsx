@@ -8,18 +8,46 @@ import {
   PRIORITY_COLORS,
   PRIORITY_OPTIONS
 } from '@/lib/constants'
+import {
+  Clock,
+  TrendingUp,
+  CheckCircle2,
+  FileText,
+  XCircle,
+  AlertTriangle,
+  Zap,
+  Minus,
+  ArrowUp,
+} from 'lucide-react'
 import type { ServiceCallStatus, ServiceCallPriority } from '@/lib/types'
 
 interface StatusBadgeProps {
   status: ServiceCallStatus
   className?: string
+  showIcon?: boolean
 }
 
-export function StatusBadge({ status, className }: StatusBadgeProps) {
+const statusIcons: Record<ServiceCallStatus, React.ComponentType<{ className?: string }>> = {
+  open: Clock,
+  in_progress: TrendingUp,
+  resolved: CheckCircle2,
+  invoiced: FileText,
+  closed: XCircle,
+}
+
+export function StatusBadge({ status, className, showIcon = true }: StatusBadgeProps) {
   const statusLabel = SERVICE_CALL_STATUS_OPTIONS.find((s) => s.value === status)?.label || status
+  const Icon = statusIcons[status]
 
   return (
-    <Badge className={cn(SERVICE_CALL_STATUS_COLORS[status], className)}>
+    <Badge
+      className={cn(
+        SERVICE_CALL_STATUS_COLORS[status],
+        "gap-1.5 font-medium transition-all hover:scale-105",
+        className
+      )}
+    >
+      {showIcon && Icon && <Icon className="h-3 w-3" />}
       {statusLabel}
     </Badge>
   )
@@ -28,13 +56,29 @@ export function StatusBadge({ status, className }: StatusBadgeProps) {
 interface PriorityBadgeProps {
   priority: ServiceCallPriority
   className?: string
+  showIcon?: boolean
 }
 
-export function PriorityBadge({ priority, className }: PriorityBadgeProps) {
+const priorityIcons: Record<ServiceCallPriority, React.ComponentType<{ className?: string }>> = {
+  low: Minus,
+  medium: ArrowUp,
+  high: AlertTriangle,
+  critical: Zap,
+}
+
+export function PriorityBadge({ priority, className, showIcon = true }: PriorityBadgeProps) {
   const priorityLabel = PRIORITY_OPTIONS.find((p) => p.value === priority)?.label || priority
+  const Icon = priorityIcons[priority]
 
   return (
-    <Badge className={cn(PRIORITY_COLORS[priority], className)}>
+    <Badge
+      className={cn(
+        PRIORITY_COLORS[priority],
+        "gap-1.5 font-medium transition-all hover:scale-105",
+        className
+      )}
+    >
+      {showIcon && Icon && <Icon className="h-3 w-3" />}
       {priorityLabel}
     </Badge>
   )
