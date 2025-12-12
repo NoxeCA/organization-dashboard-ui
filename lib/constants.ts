@@ -111,6 +111,32 @@ export const RATE_MULTIPLIERS: Record<RateType, number> = {
   holiday: 2.0,
 }
 
+// Rate Type Options with Multiplier Display
+export const RATE_TYPE_OPTIONS_WITH_MULTIPLIER: { value: RateType; label: string; multiplier: number }[] = [
+  { value: 'regular', label: 'Regular', multiplier: 1.0 },
+  { value: 'overtime', label: 'Overtime (1.5x)', multiplier: 1.5 },
+  { value: 'weekend', label: 'Weekend (1.5x)', multiplier: 1.5 },
+  { value: 'holiday', label: 'Holiday (2x)', multiplier: 2.0 },
+]
+
+// Rate Type Colors for Visual Distinction
+export const RATE_TYPE_COLORS: Record<RateType, string> = {
+  regular: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
+  overtime: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+  weekend: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+  holiday: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
+}
+
+// Time Entry Presets (in hours) - for quick entry
+export const TIME_PRESETS: { value: number; label: string }[] = [
+  { value: 0.25, label: '15m' },
+  { value: 0.5, label: '30m' },
+  { value: 1, label: '1h' },
+  { value: 2, label: '2h' },
+  { value: 4, label: '4h' },
+  { value: 8, label: '8h' },
+]
+
 // Material Source
 export const MATERIAL_SOURCE_OPTIONS: { value: MaterialSource; label: string }[] = [
   { value: 'stock', label: 'Stock' },
@@ -188,3 +214,56 @@ export const DEFAULT_TAX_RATE = 0.09
 
 // Invoice warning threshold
 export const LOW_INVOICE_THRESHOLD = 100
+
+// Time Entry Utilities
+
+/**
+ * Format hours as a human-readable duration string
+ * e.g., 2.5 -> "2h 30m", 0.25 -> "15m", 8 -> "8h"
+ */
+export function formatDuration(hours: number): string {
+  const h = Math.floor(hours)
+  const m = Math.round((hours - h) * 60)
+  if (h === 0) return `${m}m`
+  if (m === 0) return `${h}h`
+  return `${h}h ${m}m`
+}
+
+/**
+ * Calculate hours between two time strings
+ * @param startTime - "HH:mm" format
+ * @param endTime - "HH:mm" format
+ * @returns number of hours (can be negative if end < start)
+ */
+export function timeToHours(startTime: string, endTime: string): number {
+  const [startH, startM] = startTime.split(':').map(Number)
+  const [endH, endM] = endTime.split(':').map(Number)
+  const startMinutes = startH * 60 + startM
+  const endMinutes = endH * 60 + endM
+  return (endMinutes - startMinutes) / 60
+}
+
+/**
+ * Format elapsed seconds as HH:MM:SS
+ */
+export function formatElapsedTime(seconds: number): string {
+  const h = Math.floor(seconds / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = seconds % 60
+  return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`
+}
+
+/**
+ * Convert elapsed seconds to hours (for time entry)
+ */
+export function secondsToHours(seconds: number): number {
+  return Math.round((seconds / 3600) * 4) / 4 // Round to nearest 0.25
+}
+
+/**
+ * Get current time as "HH:mm" string
+ */
+export function getCurrentTime(): string {
+  const now = new Date()
+  return `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`
+}

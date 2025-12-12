@@ -87,12 +87,20 @@ export function DatePickerCell({
           <CalendarIcon className="h-3 w-3 text-muted-foreground" />
           <span className={cn(color)}>{text}</span>
           {date && (
-            <button
+            <span
+              role="button"
+              tabIndex={0}
               onClick={handleClear}
-              className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-muted rounded"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  handleClear(e as unknown as React.MouseEvent)
+                }
+              }}
+              className="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:bg-muted rounded cursor-pointer"
             >
               <X className="h-3 w-3 text-muted-foreground" />
-            </button>
+            </span>
           )}
         </button>
       </PopoverTrigger>

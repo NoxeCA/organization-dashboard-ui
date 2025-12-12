@@ -4,6 +4,7 @@ export type ServiceCallPriority = 'low' | 'medium' | 'high' | 'critical'
 export type TaskStatus = 'todo' | 'in_progress' | 'completed' | 'cancelled'
 export type RateType = 'regular' | 'overtime' | 'weekend' | 'holiday'
 export type MaterialSource = 'stock' | 'purchased' | 'customer_provided'
+export type TimeEntryMode = 'manual' | 'duration' | 'start_end' | 'timer'
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled'
 export type InvoiceLineType = 'labor' | 'material' | 'travel' | 'other'
 export type IssueType = 'network' | 'hardware' | 'software' | 'installation' | 'maintenance' | 'other'
@@ -103,6 +104,20 @@ export interface TimeEntry {
   rateType: RateType
   notes?: string
   billable: boolean
+  // Time entry mode fields
+  startTime?: string           // "HH:mm" format
+  endTime?: string             // "HH:mm" format
+  entryMode?: TimeEntryMode    // How the entry was created
+}
+
+export interface ActiveTimer {
+  id: string
+  taskId: string
+  employeeId: string
+  startedAt: string            // ISO datetime when timer started
+  rateType: RateType
+  billable: boolean
+  notes?: string
 }
 
 export interface MaterialUsage {
@@ -209,6 +224,10 @@ export interface TimeEntryFormData {
   notes?: string
   billable: boolean
   employeeId: string
+  // Time entry mode fields
+  startTime?: string
+  endTime?: string
+  entryMode?: TimeEntryMode
 }
 
 export interface MaterialUsageFormData {

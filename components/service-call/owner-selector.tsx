@@ -89,12 +89,20 @@ export function OwnerSelector({
                 <Crown className="absolute -top-1 -right-1 h-2.5 w-2.5 text-amber-500 fill-amber-400" />
               </div>
               <span className="truncate font-medium">{owner.name}</span>
-              <button
+              <span
+                role="button"
+                tabIndex={0}
                 onClick={handleClear}
-                className="ml-auto h-4 w-4 rounded-full hover:bg-muted flex items-center justify-center"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    handleClear(e as unknown as React.MouseEvent)
+                  }
+                }}
+                className="ml-auto h-4 w-4 rounded-full hover:bg-muted flex items-center justify-center cursor-pointer"
               >
                 <X className="h-3 w-3 text-muted-foreground" />
-              </button>
+              </span>
             </>
           ) : (
             <>

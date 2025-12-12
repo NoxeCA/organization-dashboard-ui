@@ -35,11 +35,14 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { useData } from '@/context/data-context'
-import { TimeEntryDialog } from './time-entry-dialog'
+import { TimeEntrySheet } from './time-entry-sheet'
+import { TimeEntryList } from './time-entry-list'
+import { TimerWidget } from './timer-widget'
 import { MaterialDialog } from './material-dialog'
-import { formatCurrency, formatDate, TASK_STATUS_OPTIONS, TASK_TRANSITIONS, RATE_TYPE_OPTIONS, RATE_MULTIPLIERS } from '@/lib/constants'
-import type { Task, TimeEntry, MaterialUsage, TaskStatus } from '@/lib/types'
-import { ChevronDown, Clock, Package, Plus, Trash2 } from 'lucide-react'
+import { useTimer } from '@/hooks/use-timer'
+import { formatCurrency, TASK_STATUS_OPTIONS, TASK_TRANSITIONS, RATE_MULTIPLIERS } from '@/lib/constants'
+import type { Task, TimeEntry, MaterialUsage, TaskStatus, TimeEntryFormData, RateType } from '@/lib/types'
+import { ChevronDown, Clock, Package, Plus, Trash2, Timer } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
 
 interface TaskDetailPanelProps {
@@ -57,9 +60,23 @@ export function TaskDetailPanel({ task, isOpen, onToggle }: TaskDetailPanelProps
     deleteMaterialUsage,
     updateTask,
     deleteTask,
+    addTimeEntry,
+    updateTimeEntry,
   } = useData()
 
-  const [timeDialogOpen, setTimeDialogOpen] = useState(false)
+  // Timer hook
+  const {
+    activeTimer,
+    elapsedSeconds,
+    formattedTime,
+    isRunning: isTimerRunning,
+    startTimer,
+    stopTimer,
+    cancelTimer,
+  } = useTimer()
+
+  const [timeSheetOpen, setTimeSheetOpen] = useState(false)
+  const [editingEntry, setEditingEntry] = useState<TimeEntry | undefined>(undefined)
   const [materialDialogOpen, setMaterialDialogOpen] = useState(false)
   const [deleteTimeId, setDeleteTimeId] = useState<string | null>(null)
   const [deleteMaterialId, setDeleteMaterialId] = useState<string | null>(null)
@@ -85,14 +102,6 @@ export function TaskDetailPanel({ task, isOpen, onToggle }: TaskDetailPanelProps
       .toUpperCase()
   }
 
-  const getEmployeeName = (employeeId: string) => {
-    return employees.find(e => e.id === employeeId)?.name || 'Unknown'
-  }
-
-  const getRateLabel = (rateType: string) => {
-    return RATE_TYPE_OPTIONS.find(r => r.value === rateType)?.label || rateType
-  }
-
   const calculateTimeEntryCost = (entry: TimeEntry) => {
     const employee = employees.find(e => e.id === entry.employeeId)
     if (!employee) return 0
@@ -102,6 +111,9 @@ export function TaskDetailPanel({ task, isOpen, onToggle }: TaskDetailPanelProps
 
   const totalHours = timeEntries.reduce((sum, entry) => sum + entry.hours, 0)
   const totalLaborCost = timeEntries.reduce((sum, entry) => sum + calculateTimeEntryCost(entry), 0)
+
+  // Check if timer is running for this task
+  const isTimerForThisTask = activeTimer?.taskId === task.id
   const totalMaterialCost = materials.reduce((sum, mat) => {
     return sum + (mat.unitCost ? mat.quantity * mat.unitCost : 0)
   }, 0)
@@ -128,6 +140,46 @@ export function TaskDetailPanel({ task, isOpen, onToggle }: TaskDetailPanelProps
     deleteTimeEntry(id)
     setDeleteTimeId(null)
     toast.success('Time entry deleted')
+  }
+
+  const handleTimeEntrySubmit = (data: TimeEntryFormData) => {
+    if (editingEntry) {
+      // Edit mode
+      updateTimeEntry(editingEntry.id, data)
+      toast.success('Time entry updated')
+    } else {
+      // Add mode
+      addTimeEntry(task.id, data)
+      toast.success('Time entry added')
+    }
+    setEditingEntry(undefined)
+  }
+
+  const handleEditTimeEntry = (entry: TimeEntry) => {
+    setEditingEntry(entry)
+    setTimeSheetOpen(true)
+  }
+
+  const handleStartTimer = (config: {
+    employeeId: string
+    rateType: RateType
+    billable: boolean
+    notes?: string
+  }) => {
+    startTimer({ ...config, taskId: task.id })
+  }
+
+  const handleStopTimer = () => {
+    const entryData = stopTimer()
+    if (entryData) {
+      addTimeEntry(task.id, entryData)
+      toast.success('Time entry saved')
+    }
+  }
+
+  const handleOpenTimeSheet = () => {
+    setEditingEntry(undefined)
+    setTimeSheetOpen(true)
   }
 
   const handleDeleteMaterial = (id: string) => {
@@ -257,73 +309,61 @@ export function TaskDetailPanel({ task, isOpen, onToggle }: TaskDetailPanelProps
               <div className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-muted-foreground" />
                 <h4 className="text-sm font-semibold">Time Entries</h4>
-                {timeEntries.length > 0 && (
+                {isTimerForThisTask && (
+                  <Badge variant="outline" className="animate-pulse border-red-200 text-red-600 dark:border-red-900 dark:text-red-400">
+                    <div className="w-2 h-2 bg-red-500 rounded-full mr-1" />
+                    Recording
+                  </Badge>
+                )}
+                {timeEntries.length > 0 && !isTimerForThisTask && (
                   <Badge variant="secondary">
                     {totalHours}h / {formatCurrency(totalLaborCost)}
                   </Badge>
                 )}
               </div>
-              <Button
-                size="sm"
-                onClick={() => setTimeDialogOpen(true)}
-                disabled={!isTaskActive}
-                title={!isTaskActive ? `Cannot add time to ${task.status} task` : undefined}
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Add Time
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleOpenTimeSheet}
+                  disabled={!isTaskActive || isTimerRunning}
+                  title={isTimerRunning ? 'Stop the running timer first' : !isTaskActive ? `Cannot add time to ${task.status} task` : 'Start a timer'}
+                >
+                  <Timer className="h-4 w-4 mr-1" />
+                  Timer
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleOpenTimeSheet}
+                  disabled={!isTaskActive}
+                  title={!isTaskActive ? `Cannot add time to ${task.status} task` : undefined}
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Time
+                </Button>
+              </div>
             </div>
 
-            {timeEntries.length === 0 ? (
-              <div className="text-sm text-muted-foreground text-center py-4 border rounded-md">
-                No time entries yet
-              </div>
-            ) : (
-              <div className="border rounded-md">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Employee</TableHead>
-                      <TableHead>Hours</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Cost</TableHead>
-                      <TableHead>Notes</TableHead>
-                      <TableHead className="w-[50px]"></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {timeEntries.map((entry) => (
-                      <TableRow key={entry.id}>
-                        <TableCell className="text-sm">{formatDate(entry.date)}</TableCell>
-                        <TableCell className="text-sm">{getEmployeeName(entry.employeeId)}</TableCell>
-                        <TableCell className="text-sm">
-                          {entry.hours}
-                          {!entry.billable && (
-                            <Badge variant="outline" className="ml-1 text-xs">NB</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm">{getRateLabel(entry.rateType)}</TableCell>
-                        <TableCell className="text-sm">{formatCurrency(calculateTimeEntryCost(entry))}</TableCell>
-                        <TableCell className="text-sm max-w-[200px] truncate">
-                          {entry.notes || '-'}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => setDeleteTimeId(entry.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+            {/* Timer Widget */}
+            {isTimerForThisTask && (
+              <TimerWidget
+                activeTimer={activeTimer}
+                elapsedSeconds={elapsedSeconds}
+                formattedTime={formattedTime}
+                onStop={handleStopTimer}
+                onCancel={cancelTimer}
+                taskTitle={task.title}
+                className="mb-3"
+              />
             )}
+
+            {/* Time Entry List */}
+            <TimeEntryList
+              entries={timeEntries}
+              employees={employees}
+              onEdit={handleEditTimeEntry}
+              onDelete={(id) => setDeleteTimeId(id)}
+            />
           </div>
 
           <Separator />
@@ -430,11 +470,19 @@ export function TaskDetailPanel({ task, isOpen, onToggle }: TaskDetailPanelProps
         </CollapsibleContent>
       </Collapsible>
 
-      {/* Dialogs */}
-      <TimeEntryDialog
-        open={timeDialogOpen}
-        onOpenChange={setTimeDialogOpen}
+      {/* Time Entry Sheet */}
+      <TimeEntrySheet
+        open={timeSheetOpen}
+        onOpenChange={(open) => {
+          setTimeSheetOpen(open)
+          if (!open) setEditingEntry(undefined)
+        }}
         task={task}
+        employees={employees}
+        entry={editingEntry}
+        onSubmit={handleTimeEntrySubmit}
+        onStartTimer={handleStartTimer}
+        isTimerRunning={isTimerRunning}
       />
 
       <MaterialDialog

@@ -84,6 +84,7 @@ interface DataContextType {
   updateTimeEntry: (id: string, data: Partial<TimeEntry>) => void
   deleteTimeEntry: (id: string) => void
   getTimeEntriesForTask: (taskId: string) => TimeEntry[]
+  getRecentTimeEntries: (employeeId?: string, limit?: number) => TimeEntry[]
 
   // Material Usage
   materialUsages: MaterialUsage[]
@@ -455,6 +456,19 @@ export function DataProvider({ children }: { children: ReactNode }) {
     [timeEntriesState]
   )
 
+  const getRecentTimeEntries = useCallback(
+    (employeeId?: string, limit: number = 5) => {
+      let entries = [...timeEntriesState]
+      if (employeeId) {
+        entries = entries.filter((te) => te.employeeId === employeeId)
+      }
+      // Sort by date descending
+      entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      return entries.slice(0, limit)
+    },
+    [timeEntriesState]
+  )
+
   // Material Usage operations
   const addMaterialUsage = useCallback((taskId: string, data: MaterialUsageFormData): MaterialUsage => {
     const newUsage: MaterialUsage = {
@@ -652,6 +666,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     updateTimeEntry,
     deleteTimeEntry,
     getTimeEntriesForTask,
+    getRecentTimeEntries,
 
     // Material Usage
     materialUsages: materialUsagesState,
