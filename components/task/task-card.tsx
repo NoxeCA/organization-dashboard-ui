@@ -43,39 +43,39 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
       className={`cursor-pointer transition-all hover:shadow-md ${onClick ? 'hover:border-primary' : ''}`}
       onClick={onClick}
     >
-      <CardHeader className="pb-3">
+      <CardHeader className="py-3 px-4">
         <div className="flex items-start justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-base leading-tight mb-1 truncate">
+            <h3 className="font-medium text-sm leading-tight truncate">
               {task.title}
             </h3>
             {task.description && (
-              <p className="text-sm text-muted-foreground line-clamp-2">
+              <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
                 {task.description}
               </p>
             )}
           </div>
-          <Badge className={TASK_STATUS_COLORS[task.status]}>
+          <Badge className={cn(TASK_STATUS_COLORS[task.status], "text-[10px] px-1.5 py-0.5")}>
             {statusLabel}
           </Badge>
         </div>
       </CardHeader>
 
-      <CardContent className="pt-0">
-        <div className="flex items-center justify-between gap-4">
+      <CardContent className="pt-0 pb-3 px-4">
+        <div className="flex items-center justify-between gap-3">
           {/* Assigned Employees */}
           <div className="flex items-center gap-2">
-            <div className="flex -space-x-2">
+            <div className="flex -space-x-1.5">
               {assignedEmps.slice(0, 3).map(emp => (
-                <Avatar key={emp.id} className="h-8 w-8 border-2 border-background">
-                  <AvatarFallback className="text-xs bg-primary/10">
+                <Avatar key={emp.id} className="h-6 w-6 border-2 border-background">
+                  <AvatarFallback className="text-[10px] bg-primary/10">
                     {getInitials(emp.name)}
                   </AvatarFallback>
                 </Avatar>
               ))}
               {assignedEmps.length > 3 && (
-                <Avatar className="h-8 w-8 border-2 border-background">
-                  <AvatarFallback className="text-xs bg-muted">
+                <Avatar className="h-6 w-6 border-2 border-background">
+                  <AvatarFallback className="text-[10px] bg-muted">
                     +{assignedEmps.length - 3}
                   </AvatarFallback>
                 </Avatar>
@@ -84,16 +84,16 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
           </div>
 
           {/* Stats */}
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
             {totalHours > 0 && (
               <div className="flex items-center gap-1">
-                <Clock className="h-4 w-4" />
+                <Clock className="h-3.5 w-3.5" />
                 <span>{totalHours}h</span>
               </div>
             )}
             {materials.length > 0 && (
               <div className="flex items-center gap-1">
-                <Package className="h-4 w-4" />
+                <Package className="h-3.5 w-3.5" />
                 <span>{materials.length}</span>
               </div>
             )}
@@ -101,8 +101,8 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
         </div>
 
         {task.estimatedHours && task.estimatedHours > 0 && (
-          <div className="mt-3 space-y-1">
-            <div className="flex items-center justify-between text-xs">
+          <div className="mt-2 space-y-0.5">
+            <div className="flex items-center justify-between text-[10px]">
               <span className="text-muted-foreground">
                 {totalHours.toFixed(1)}h / {task.estimatedHours}h
               </span>
@@ -116,7 +116,7 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
             <Progress
               value={Math.min((totalHours / task.estimatedHours) * 100, 100)}
               className={cn(
-                "h-1.5",
+                "h-1",
                 totalHours > task.estimatedHours && "[&>div]:bg-orange-500"
               )}
             />

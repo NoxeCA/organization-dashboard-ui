@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
   Select,
@@ -242,248 +242,239 @@ export default function ServiceCallDetailPage() {
           }
         />
 
-        <div className="flex-1 space-y-6 p-6">
-          {/* Hero Section */}
-          <div className="relative overflow-hidden rounded-xl border bg-gradient-to-br from-background via-background to-muted/50 p-6">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-bl from-primary/5 via-transparent to-transparent" />
-
-            <div className="relative space-y-4">
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <code className="rounded bg-muted px-2 py-0.5 font-mono text-xs">
+        <div className="flex-1 space-y-4 p-4">
+          {/* Compact Header */}
+          <div className="rounded-lg border bg-card">
+            <div className="p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="space-y-1 min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
                       {serviceCall.id}
                     </code>
-                    <span>•</span>
-                    <span>{issueTypeLabel}</span>
+                    <span className="text-muted-foreground text-xs">•</span>
+                    <span className="text-xs text-muted-foreground">{issueTypeLabel}</span>
+                    <div className="flex items-center gap-1.5 ml-auto sm:ml-0">
+                      <StatusBadge status={serviceCall.status} className="text-xs" />
+                      <PriorityBadge priority={serviceCall.priority} className="text-xs" />
+                    </div>
                   </div>
-                  <h1 className="text-3xl font-bold tracking-tight">{serviceCall.title}</h1>
-                  <p className="text-muted-foreground max-w-2xl">{serviceCall.description}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <StatusBadge status={serviceCall.status} className="text-sm px-3 py-1" />
-                  <PriorityBadge priority={serviceCall.priority} className="text-sm px-3 py-1" />
+                  <h1 className="text-xl font-semibold tracking-tight truncate">{serviceCall.title}</h1>
+                  <p className="text-sm text-muted-foreground line-clamp-2">{serviceCall.description}</p>
                 </div>
               </div>
+            </div>
 
-              {/* Status Flow */}
-              <div className="pt-4">
-                <div className="flex items-center gap-1">
-                  {statusFlow.map((status, index) => {
-                    const isCompleted = index < currentStatusIndex
-                    const isCurrent = index === currentStatusIndex
-                    const statusLabel = SERVICE_CALL_STATUS_OPTIONS.find(s => s.value === status)?.label || status
+            {/* Quick Info Bar - Site & Customer */}
+            <div className="border-t bg-muted/30 px-4 py-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                {site ? (
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <span className="text-sm font-medium truncate">{site.name}</span>
+                      <span className="text-xs text-muted-foreground hidden md:inline truncate">{site.address}</span>
+                    </div>
+                    {customer && (
+                      <>
+                        <Separator orientation="vertical" className="h-4 hidden sm:block" />
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                          <span className="text-sm truncate">{customer.name}</span>
+                          {customer.phone && (
+                            <span className="text-xs text-muted-foreground hidden lg:flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              {customer.phone}
+                            </span>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-sm text-muted-foreground">No site assigned</span>
+                )}
+                <div className="flex items-center gap-2">
+                  <User className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-sm">{serviceCall.requesterName}</span>
+                  {serviceCall.requesterContact && (
+                    <span className="text-xs text-muted-foreground hidden sm:inline">({serviceCall.requesterContact})</span>
+                  )}
+                </div>
+              </div>
+            </div>
 
-                    return (
-                      <div key={status} className="flex items-center">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div
-                              className={cn(
-                                "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all",
-                                isCompleted && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
-                                isCurrent && "bg-primary text-primary-foreground shadow-md",
-                                !isCompleted && !isCurrent && "bg-muted text-muted-foreground"
-                              )}
-                            >
-                              {isCompleted ? (
-                                <CheckCircle2 className="h-3 w-3" />
-                              ) : isCurrent ? (
-                                <div className="h-2 w-2 rounded-full bg-current animate-pulse" />
-                              ) : null}
-                              <span className="hidden sm:inline">{statusLabel}</span>
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>{statusLabel}</TooltipContent>
-                        </Tooltip>
-                        {index < statusFlow.length - 1 && (
-                          <ChevronRight className={cn(
-                            "h-4 w-4 mx-1",
-                            index < currentStatusIndex ? "text-green-500" : "text-muted-foreground/30"
-                          )} />
+            {/* Compact Stats Bar */}
+            <div className="border-t px-4 py-2.5">
+              <div className="flex items-center gap-6 overflow-x-auto">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center justify-center h-6 w-6 rounded bg-primary/10">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                      </div>
+                      <div className="flex items-baseline gap-1">
+                        <span className="font-semibold text-sm">{completedTasks}/{serviceTasks.length}</span>
+                        <span className="text-xs text-muted-foreground">tasks</span>
+                      </div>
+                      {serviceTasks.length > 0 && (
+                        <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden hidden sm:block">
+                          <div
+                            className="h-full bg-primary rounded-full transition-all"
+                            style={{ width: `${taskCompletionPercentage}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>{taskCompletionPercentage}% complete</TooltipContent>
+                </Tooltip>
+
+                <Separator orientation="vertical" className="h-5" />
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center justify-center h-6 w-6 rounded bg-blue-500/10">
+                        <Clock className="h-3.5 w-3.5 text-blue-500" />
+                      </div>
+                      <div className="flex items-baseline gap-1">
+                        <span className="font-semibold text-sm">{totalHours.toFixed(1)}h</span>
+                        {totalEstimatedHours > 0 && (
+                          <span className="text-xs text-muted-foreground">/ {totalEstimatedHours}h</span>
                         )}
                       </div>
-                    )
-                  })}
-                </div>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>{relatedTimeEntries.length} time entries logged</TooltipContent>
+                </Tooltip>
+
+                <Separator orientation="vertical" className="h-5" />
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center justify-center h-6 w-6 rounded bg-orange-500/10">
+                        <Package className="h-3.5 w-3.5 text-orange-500" />
+                      </div>
+                      <div className="flex items-baseline gap-1">
+                        <span className="font-semibold text-sm">{formatCurrency(totalMaterialCost)}</span>
+                        <span className="text-xs text-muted-foreground hidden sm:inline">({relatedMaterials.length})</span>
+                      </div>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>{relatedMaterials.length} materials used</TooltipContent>
+                </Tooltip>
+
+                <Separator orientation="vertical" className="h-5" />
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <div className="flex items-center justify-center h-6 w-6 rounded bg-green-500/10">
+                        <DollarSign className="h-3.5 w-3.5 text-green-500" />
+                      </div>
+                      <div className="flex items-baseline gap-1">
+                        <span className="font-semibold text-sm">{formatCurrency(totalInvoicedAmount)}</span>
+                        <span className="text-xs text-muted-foreground hidden sm:inline">({serviceInvoices.length})</span>
+                      </div>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>{serviceInvoices.length} invoices generated</TooltipContent>
+                </Tooltip>
               </div>
             </div>
           </div>
 
-          {/* Summary Stats Cards */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="relative overflow-hidden group hover:shadow-lg transition-all">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Tasks Progress</p>
-                    <p className="text-2xl font-bold">{completedTasks}/{serviceTasks.length}</p>
-                  </div>
-                  <div className="p-3 rounded-full bg-primary/10">
-                    <CheckCircle2 className="h-5 w-5 text-primary" />
-                  </div>
-                </div>
-                <Progress value={taskCompletionPercentage} className="mt-3 h-2" />
-                <p className="text-xs text-muted-foreground mt-2">{taskCompletionPercentage}% complete</p>
-              </CardContent>
-            </Card>
-
-            <Card className="relative overflow-hidden group hover:shadow-lg transition-all">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Hours Logged</p>
-                    <p className="text-2xl font-bold">{totalHours.toFixed(1)}h</p>
-                  </div>
-                  <div className="p-3 rounded-full bg-blue-500/10">
-                    <Clock className="h-5 w-5 text-blue-500" />
-                  </div>
-                </div>
-                {totalEstimatedHours > 0 && (
-                  <>
-                    <Progress
-                      value={Math.min((totalHours / totalEstimatedHours) * 100, 100)}
-                      className="mt-3 h-2"
-                    />
-                    <p className="text-xs text-muted-foreground mt-2">
-                      of {totalEstimatedHours}h estimated
-                    </p>
-                  </>
-                )}
-                {totalEstimatedHours === 0 && (
-                  <p className="text-xs text-muted-foreground mt-5">No estimate set</p>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="relative overflow-hidden group hover:shadow-lg transition-all">
-              <div className="absolute inset-0 bg-gradient-to-br from-orange-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Material Costs</p>
-                    <p className="text-2xl font-bold">{formatCurrency(totalMaterialCost)}</p>
-                  </div>
-                  <div className="p-3 rounded-full bg-orange-500/10">
-                    <Package className="h-5 w-5 text-orange-500" />
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground mt-5">
-                  {relatedMaterials.length} material{relatedMaterials.length !== 1 ? 's' : ''} used
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card className="relative overflow-hidden group hover:shadow-lg transition-all">
-              <div className="absolute inset-0 bg-gradient-to-br from-green-500/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground">Total Invoiced</p>
-                    <p className="text-2xl font-bold">{formatCurrency(totalInvoicedAmount)}</p>
-                  </div>
-                  <div className="p-3 rounded-full bg-green-500/10">
-                    <DollarSign className="h-5 w-5 text-green-500" />
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground mt-5">
-                  {serviceInvoices.length} invoice{serviceInvoices.length !== 1 ? 's' : ''} generated
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
           {/* Tabs Section */}
-          <Tabs defaultValue="overview" className="space-y-6">
-            <TabsList className="h-12 p-1 bg-muted/50">
-              <TabsTrigger value="overview" className="gap-2 data-[state=active]:shadow-sm">
-                <FileText className="h-4 w-4" />
-                <span className="hidden sm:inline">Overview</span>
-              </TabsTrigger>
-              <TabsTrigger value="tasks" className="gap-2 data-[state=active]:shadow-sm">
-                <ListTodo className="h-4 w-4" />
-                <span className="hidden sm:inline">Tasks</span>
+          <Tabs defaultValue="tasks" className="space-y-4">
+            <TabsList className="h-9 p-0.5 bg-muted/50">
+              <TabsTrigger value="tasks" className="gap-1.5 text-xs h-8 px-3 data-[state=active]:shadow-sm">
+                <ListTodo className="h-3.5 w-3.5" />
+                Tasks
                 {serviceTasks.length > 0 && (
-                  <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+                  <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">
                     {serviceTasks.length}
                   </Badge>
                 )}
               </TabsTrigger>
-              <TabsTrigger value="time-materials" className="gap-2 data-[state=active]:shadow-sm">
-                <Timer className="h-4 w-4" />
-                <span className="hidden sm:inline">Time & Materials</span>
+              <TabsTrigger value="time-materials" className="gap-1.5 text-xs h-8 px-3 data-[state=active]:shadow-sm">
+                <Timer className="h-3.5 w-3.5" />
+                Time & Materials
               </TabsTrigger>
-              <TabsTrigger value="invoices" className="gap-2 data-[state=active]:shadow-sm">
-                <Receipt className="h-4 w-4" />
-                <span className="hidden sm:inline">Invoices</span>
+              <TabsTrigger value="invoices" className="gap-1.5 text-xs h-8 px-3 data-[state=active]:shadow-sm">
+                <Receipt className="h-3.5 w-3.5" />
+                Invoices
                 {serviceInvoices.length > 0 && (
-                  <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+                  <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">
                     {serviceInvoices.length}
                   </Badge>
                 )}
               </TabsTrigger>
+              <TabsTrigger value="details" className="gap-1.5 text-xs h-8 px-3 data-[state=active]:shadow-sm">
+                <FileText className="h-3.5 w-3.5" />
+                Details
+              </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="overview" className="space-y-6 mt-6">
-              <div className="grid gap-6 lg:grid-cols-2">
+            <TabsContent value="details" className="space-y-4 mt-4">
+              <div className="grid gap-4 lg:grid-cols-2">
                 {/* Service Call Details */}
                 <Card>
-                  <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Wrench className="h-5 w-5 text-muted-foreground" />
+                  <CardHeader className="pb-3 pt-4">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Wrench className="h-4 w-4 text-muted-foreground" />
                       Service Call Details
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+                  <CardContent className="space-y-3 pb-4">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-muted-foreground uppercase tracking-wide">
                           Service Call ID
                         </Label>
-                        <div className="flex items-center gap-2">
-                          <code className="rounded bg-muted px-2 py-1 text-sm font-mono">
+                        <div className="flex items-center gap-1.5">
+                          <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">
                             {serviceCall.id}
                           </code>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7"
+                            className="h-6 w-6"
                             onClick={() => copyToClipboard(serviceCall.id)}
                           >
-                            <Copy className="h-3.5 w-3.5" />
+                            <Copy className="h-3 w-3" />
                           </Button>
                         </div>
                       </div>
 
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-muted-foreground uppercase tracking-wide">
                           Issue Type
                         </Label>
                         <p className="text-sm font-medium">{issueTypeLabel}</p>
                       </div>
 
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-muted-foreground uppercase tracking-wide">
                           Created
                         </Label>
-                        <p className="text-sm">{formatDateTime(serviceCall.createdAt)}</p>
+                        <p className="text-xs">{formatDateTime(serviceCall.createdAt)}</p>
                       </div>
 
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+                      <div className="space-y-1">
+                        <Label className="text-[10px] text-muted-foreground uppercase tracking-wide">
                           Last Updated
                         </Label>
-                        <p className="text-sm">{formatDateTime(serviceCall.updatedAt)}</p>
+                        <p className="text-xs">{formatDateTime(serviceCall.updatedAt)}</p>
                       </div>
                     </div>
 
                     {serviceCall.equipmentType && (
                       <>
                         <Separator />
-                        <div className="space-y-1.5">
-                          <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+                        <div className="space-y-1">
+                          <Label className="text-[10px] text-muted-foreground uppercase tracking-wide">
                             Equipment Type
                           </Label>
                           <p className="text-sm font-medium">{serviceCall.equipmentType}</p>
@@ -495,37 +486,37 @@ export default function ServiceCallDetailPage() {
 
                 {/* Site & Customer Information */}
                 <Card>
-                  <CardHeader className="pb-4">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <Building2 className="h-5 w-5 text-muted-foreground" />
+                  <CardHeader className="pb-3 pt-4">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
                       Site & Customer
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-3 pb-4">
                     {site ? (
                       <>
-                        <div className="p-4 rounded-lg bg-muted/50 space-y-3">
-                          <div className="flex items-start gap-3">
-                            <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                        <div className="p-3 rounded-lg bg-muted/50 space-y-2">
+                          <div className="flex items-start gap-2">
+                            <MapPin className="h-3.5 w-3.5 mt-0.5 text-muted-foreground" />
                             <div>
-                              <p className="font-medium">{site.name}</p>
-                              <p className="text-sm text-muted-foreground">{site.address}</p>
+                              <p className="text-sm font-medium">{site.name}</p>
+                              <p className="text-xs text-muted-foreground">{site.address}</p>
                             </div>
                           </div>
                         </div>
 
                         {customer && (
-                          <div className="space-y-3">
-                            <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+                          <div className="space-y-2">
+                            <Label className="text-[10px] text-muted-foreground uppercase tracking-wide">
                               Customer
                             </Label>
-                            <div className="flex items-center gap-3">
-                              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                                <Building2 className="h-5 w-5 text-primary" />
+                            <div className="flex items-center gap-2.5">
+                              <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+                                <Building2 className="h-4 w-4 text-primary" />
                               </div>
                               <div>
-                                <p className="font-medium">{customer.name}</p>
-                                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                                <p className="text-sm font-medium">{customer.name}</p>
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
                                   {customer.email && (
                                     <span className="flex items-center gap-1">
                                       <Mail className="h-3 w-3" />
@@ -545,23 +536,23 @@ export default function ServiceCallDetailPage() {
                         )}
                       </>
                     ) : (
-                      <p className="text-muted-foreground">Site information not available</p>
+                      <p className="text-sm text-muted-foreground">Site information not available</p>
                     )}
 
                     <Separator />
 
-                    <div className="space-y-3">
-                      <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+                    <div className="space-y-2">
+                      <Label className="text-[10px] text-muted-foreground uppercase tracking-wide">
                         Requester
                       </Label>
-                      <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-full bg-secondary flex items-center justify-center">
-                          <User className="h-5 w-5 text-muted-foreground" />
+                      <div className="flex items-center gap-2.5">
+                        <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center">
+                          <User className="h-4 w-4 text-muted-foreground" />
                         </div>
                         <div>
-                          <p className="font-medium">{serviceCall.requesterName}</p>
+                          <p className="text-sm font-medium">{serviceCall.requesterName}</p>
                           {serviceCall.requesterContact && (
-                            <p className="text-sm text-muted-foreground">{serviceCall.requesterContact}</p>
+                            <p className="text-xs text-muted-foreground">{serviceCall.requesterContact}</p>
                           )}
                         </div>
                       </div>
@@ -571,106 +562,54 @@ export default function ServiceCallDetailPage() {
               </div>
             </TabsContent>
 
-            <TabsContent value="tasks" className="mt-6">
+            <TabsContent value="tasks" className="mt-4">
               <TaskSection serviceCallId={serviceCall.id} />
             </TabsContent>
 
-            <TabsContent value="time-materials" className="space-y-6 mt-6">
-              <div className="grid gap-4 md:grid-cols-3">
-                <Card className="border-dashed">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                      <ListTodo className="h-4 w-4" />
-                      Total Tasks
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">{serviceTasks.length}</div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {completedTasks} completed
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-dashed">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                      <Clock className="h-4 w-4" />
-                      Total Hours
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">{totalHours.toFixed(2)}</div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {relatedTimeEntries.length} time entries
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card className="border-dashed">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                      <Package className="h-4 w-4" />
-                      Material Costs
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-3xl font-bold">{formatCurrency(totalMaterialCost)}</div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {relatedMaterials.length} materials
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-
+            <TabsContent value="time-materials" className="space-y-4 mt-4">
               <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="h-5 w-5" />
+                <CardHeader className="pb-3 pt-4">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <TrendingUp className="h-4 w-4" />
                     Time & Materials Summary
                   </CardTitle>
-                  <CardDescription>
-                    Overview of all billable time and materials for this service call
-                  </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    <div className="p-4 rounded-lg bg-muted/50">
+                <CardContent className="pb-4">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="p-3 rounded-lg bg-muted/50">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-                            <Clock className="h-5 w-5 text-blue-500" />
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-8 w-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+                            <Clock className="h-4 w-4 text-blue-500" />
                           </div>
                           <div>
-                            <h4 className="font-medium">Time Entries</h4>
-                            <p className="text-sm text-muted-foreground">
-                              {relatedTimeEntries.length} entries logged
+                            <h4 className="text-sm font-medium">Time Entries</h4>
+                            <p className="text-xs text-muted-foreground">
+                              {relatedTimeEntries.length} entries
                             </p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-2xl font-bold">{totalHours.toFixed(2)}h</p>
-                          <p className="text-xs text-muted-foreground">Total billable</p>
+                          <p className="text-lg font-bold">{totalHours.toFixed(2)}h</p>
                         </div>
                       </div>
                     </div>
 
-                    <div className="p-4 rounded-lg bg-muted/50">
+                    <div className="p-3 rounded-lg bg-muted/50">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-full bg-orange-500/10 flex items-center justify-center">
-                            <Package className="h-5 w-5 text-orange-500" />
+                        <div className="flex items-center gap-2.5">
+                          <div className="h-8 w-8 rounded-full bg-orange-500/10 flex items-center justify-center">
+                            <Package className="h-4 w-4 text-orange-500" />
                           </div>
                           <div>
-                            <h4 className="font-medium">Materials</h4>
-                            <p className="text-sm text-muted-foreground">
-                              {relatedMaterials.length} items used
+                            <h4 className="text-sm font-medium">Materials</h4>
+                            <p className="text-xs text-muted-foreground">
+                              {relatedMaterials.length} items
                             </p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-2xl font-bold">{formatCurrency(totalMaterialCost)}</p>
-                          <p className="text-xs text-muted-foreground">Total cost</p>
+                          <p className="text-lg font-bold">{formatCurrency(totalMaterialCost)}</p>
                         </div>
                       </div>
                     </div>
@@ -679,29 +618,26 @@ export default function ServiceCallDetailPage() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="invoices" className="mt-6">
+            <TabsContent value="invoices" className="mt-4">
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
+                <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4">
                   <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Receipt className="h-5 w-5" />
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Receipt className="h-4 w-4" />
                       Invoices
                     </CardTitle>
-                    <CardDescription>
-                      Invoices generated for this service call
-                    </CardDescription>
                   </div>
                   <InvoiceGenerator serviceCallId={serviceCall.id} />
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pb-4">
                   {serviceInvoices.length === 0 ? (
-                    <div className="text-center py-12">
-                      <div className="mx-auto w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                        <Receipt className="h-8 w-8 text-muted-foreground" />
+                    <div className="text-center py-8">
+                      <div className="mx-auto w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                        <Receipt className="h-6 w-6 text-muted-foreground" />
                       </div>
-                      <h3 className="font-semibold">No invoices yet</h3>
-                      <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
-                        Generate an invoice when you're ready to bill for completed work
+                      <h3 className="text-sm font-semibold">No invoices yet</h3>
+                      <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+                        Generate an invoice when ready to bill
                       </p>
                     </div>
                   ) : (
