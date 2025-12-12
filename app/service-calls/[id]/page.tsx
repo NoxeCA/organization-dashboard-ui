@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { PageHeader } from '@/components/layout/page-header'
@@ -8,20 +7,15 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+} from '@/components/ui/dropdown-menu'
 import {
   Table,
   TableBody,
@@ -39,7 +33,8 @@ import {
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { StatusBadge, PriorityBadge } from '@/components/service-call/status-badge'
-import { TaskGroupSection } from '@/components/task-group'
+import { OwnerSelector } from '@/components/service-call/owner-selector'
+import { TaskGroupSection } from '@/components/task-group/task-group-section'
 import { InvoiceGenerator } from '@/components/invoice/invoice-generator'
 import { useData } from '@/context/data-context'
 import {
@@ -92,6 +87,7 @@ export default function ServiceCallDetailPage() {
     updateServiceCall,
     sites,
     customers,
+    employees,
     getTasksForServiceCall,
     timeEntries,
     materialUsages,
@@ -103,11 +99,6 @@ export default function ServiceCallDetailPage() {
   const customer = site ? customers.find((c) => c.id === site.customerId) : undefined
   const serviceTasks = serviceCall ? getTasksForServiceCall(serviceCall.id) : []
   const serviceInvoices = serviceCall ? getInvoicesForServiceCall(serviceCall.id) : []
-
-  const [statusDialogOpen, setStatusDialogOpen] = useState(false)
-  const [priorityDialogOpen, setPriorityDialogOpen] = useState(false)
-  const [selectedStatus, setSelectedStatus] = useState<ServiceCallStatus | ''>('')
-  const [selectedPriority, setSelectedPriority] = useState<ServiceCallPriority | ''>('')
 
   if (!serviceCall) {
     return (
@@ -138,24 +129,6 @@ export default function ServiceCallDetailPage() {
         </div>
       </div>
     )
-  }
-
-  const handleStatusUpdate = () => {
-    if (selectedStatus && selectedStatus !== serviceCall.status) {
-      updateServiceCall(serviceCall.id, { status: selectedStatus })
-      toast.success('Status updated successfully')
-      setStatusDialogOpen(false)
-      setSelectedStatus('')
-    }
-  }
-
-  const handlePriorityUpdate = () => {
-    if (selectedPriority && selectedPriority !== serviceCall.priority) {
-      updateServiceCall(serviceCall.id, { priority: selectedPriority })
-      toast.success('Priority updated successfully')
-      setPriorityDialogOpen(false)
-      setSelectedPriority('')
-    }
   }
 
   const copyToClipboard = (text: string) => {
@@ -203,219 +176,226 @@ export default function ServiceCallDetailPage() {
             { label: serviceCall.id },
           ]}
           actions={
-            <div className="flex items-center gap-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => copyToClipboard(serviceCall.id)}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Copy ID</TooltipContent>
-              </Tooltip>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSelectedStatus(serviceCall.status)
-                  setStatusDialogOpen(true)
-                }}
-              >
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit Status
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setSelectedPriority(serviceCall.priority)
-                  setPriorityDialogOpen(true)
-                }}
-              >
-                <Pencil className="mr-2 h-4 w-4" />
-                Edit Priority
-              </Button>
-            </div>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => copyToClipboard(serviceCall.id)}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Copy ID</TooltipContent>
+            </Tooltip>
           }
         />
 
-        <div className="flex-1 space-y-4 p-4">
-          {/* Compact Header */}
-          <div className="rounded-lg border bg-card">
-            <div className="p-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                <div className="space-y-1 min-w-0 flex-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
-                      {serviceCall.id}
-                    </code>
-                    <span className="text-muted-foreground text-xs">•</span>
-                    <span className="text-xs text-muted-foreground">{issueTypeLabel}</span>
-                    <div className="flex items-center gap-1.5 ml-auto sm:ml-0">
-                      <StatusBadge status={serviceCall.status} className="text-xs" />
-                      <PriorityBadge priority={serviceCall.priority} className="text-xs" />
-                    </div>
-                  </div>
-                  <h1 className="text-xl font-semibold tracking-tight truncate">{serviceCall.title}</h1>
-                  <p className="text-sm text-muted-foreground line-clamp-2">{serviceCall.description}</p>
-                </div>
+        <div className="flex-1 space-y-6 p-6 max-w-7xl mx-auto w-full">
+          {/* Main Header Area */}
+          <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+            <div className="space-y-4 flex-1">
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <span className="font-mono bg-muted px-2 py-0.5 rounded text-foreground">{serviceCall.id}</span>
+                <span>•</span>
+                <span>{issueTypeLabel}</span>
+                <span>•</span>
+                <span className="flex items-center gap-1">
+                  <User className="h-3 w-3" />
+                  {serviceCall.requesterName}
+                </span>
+              </div>
+              
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight text-foreground mb-2">{serviceCall.title}</h1>
+                <p className="text-lg text-muted-foreground max-w-2xl">{serviceCall.description}</p>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3 pt-2">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-auto p-0 hover:bg-transparent">
+                      <StatusBadge status={serviceCall.status} className="text-sm px-3 py-1 cursor-pointer" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-[200px]">
+                    <DropdownMenuLabel>Update Status</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuRadioGroup
+                      value={serviceCall.status}
+                      onValueChange={(val) => updateServiceCall(serviceCall.id, { status: val as ServiceCallStatus })}
+                    >
+                      {SERVICE_CALL_STATUS_OPTIONS
+                        .filter((option) =>
+                          option.value === serviceCall.status ||
+                          SERVICE_CALL_TRANSITIONS[serviceCall.status].includes(option.value)
+                        )
+                        .map((option) => (
+                          <DropdownMenuRadioItem key={option.value} value={option.value}>
+                            {option.label}
+                          </DropdownMenuRadioItem>
+                        ))}
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="h-auto p-0 hover:bg-transparent">
+                      <PriorityBadge priority={serviceCall.priority} className="text-sm px-3 py-1 cursor-pointer" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-[200px]">
+                    <DropdownMenuLabel>Change Priority</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuRadioGroup
+                      value={serviceCall.priority}
+                      onValueChange={(val) => updateServiceCall(serviceCall.id, { priority: val as ServiceCallPriority })}
+                    >
+                      {PRIORITY_OPTIONS.map((option) => (
+                        <DropdownMenuRadioItem key={option.value} value={option.value}>
+                          {option.label}
+                        </DropdownMenuRadioItem>
+                      ))}
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <div className="h-5 w-px bg-border mx-1" />
+
+                <OwnerSelector
+                  employees={employees}
+                  ownerId={serviceCall.ownerId}
+                  onOwnerChange={(ownerId) => updateServiceCall(serviceCall.id, { ownerId })}
+                  placeholder="Assign owner"
+                />
               </div>
             </div>
 
-            {/* Quick Info Bar - Site & Customer */}
-            <div className="border-t bg-muted/30 px-4 py-3">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                {site ? (
-                  <div className="flex items-center gap-4 flex-wrap">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <MapPin className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      <span className="text-sm font-medium truncate">{site.name}</span>
-                      <span className="text-xs text-muted-foreground hidden md:inline truncate">{site.address}</span>
-                    </div>
-                    {customer && (
-                      <>
-                        <Separator orientation="vertical" className="h-4 hidden sm:block" />
-                        <div className="flex items-center gap-2 min-w-0">
-                          <Building2 className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                          <span className="text-sm truncate">{customer.name}</span>
-                          {customer.phone && (
-                            <span className="text-xs text-muted-foreground hidden lg:flex items-center gap-1">
-                              <Phone className="h-3 w-3" />
-                              {customer.phone}
-                            </span>
-                          )}
+            {/* Site & Customer Card - Compact Side Widget */}
+            <div className="w-full md:w-80 shrink-0">
+               <Card className="bg-muted/30 border-none shadow-none">
+                 <CardContent className="p-4 space-y-4">
+                   {site ? (
+                      <div className="space-y-3">
+                        <div className="flex items-start gap-3">
+                          <div className="mt-0.5 h-8 w-8 rounded-full bg-background flex items-center justify-center border shadow-sm">
+                            <MapPin className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <div>
+                            <p className="font-semibold text-sm">{site.name}</p>
+                            <p className="text-xs text-muted-foreground leading-relaxed">{site.address}</p>
+                          </div>
                         </div>
-                      </>
-                    )}
-                  </div>
-                ) : (
-                  <span className="text-sm text-muted-foreground">No site assigned</span>
-                )}
-                <div className="flex items-center gap-2">
-                  <User className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-sm">{serviceCall.requesterName}</span>
-                  {serviceCall.requesterContact && (
-                    <span className="text-xs text-muted-foreground hidden sm:inline">({serviceCall.requesterContact})</span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Compact Stats Bar */}
-            <div className="border-t px-4 py-2.5">
-              <div className="flex items-center gap-6 overflow-x-auto">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <div className="flex items-center justify-center h-6 w-6 rounded bg-primary/10">
-                        <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
-                      </div>
-                      <div className="flex items-baseline gap-1">
-                        <span className="font-semibold text-sm">{completedTasks}/{serviceTasks.length}</span>
-                        <span className="text-xs text-muted-foreground">tasks</span>
-                      </div>
-                      {serviceTasks.length > 0 && (
-                        <div className="w-16 h-1.5 bg-muted rounded-full overflow-hidden hidden sm:block">
-                          <div
-                            className="h-full bg-primary rounded-full transition-all"
-                            style={{ width: `${taskCompletionPercentage}%` }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>{taskCompletionPercentage}% complete</TooltipContent>
-                </Tooltip>
-
-                <Separator orientation="vertical" className="h-5" />
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <div className="flex items-center justify-center h-6 w-6 rounded bg-blue-500/10">
-                        <Clock className="h-3.5 w-3.5 text-blue-500" />
-                      </div>
-                      <div className="flex items-baseline gap-1">
-                        <span className="font-semibold text-sm">{totalHours.toFixed(1)}h</span>
-                        {totalEstimatedHours > 0 && (
-                          <span className="text-xs text-muted-foreground">/ {totalEstimatedHours}h</span>
+                        {customer && (
+                          <div className="flex items-start gap-3 border-t border-dashed pt-3">
+                            <div className="mt-0.5 h-8 w-8 rounded-full bg-background flex items-center justify-center border shadow-sm">
+                              <Building2 className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-sm">{customer.name}</p>
+                              <p className="text-xs text-muted-foreground">{customer.phone}</p>
+                            </div>
+                          </div>
                         )}
                       </div>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>{relatedTimeEntries.length} time entries logged</TooltipContent>
-                </Tooltip>
-
-                <Separator orientation="vertical" className="h-5" />
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <div className="flex items-center justify-center h-6 w-6 rounded bg-orange-500/10">
-                        <Package className="h-3.5 w-3.5 text-orange-500" />
-                      </div>
-                      <div className="flex items-baseline gap-1">
-                        <span className="font-semibold text-sm">{formatCurrency(totalMaterialCost)}</span>
-                        <span className="text-xs text-muted-foreground hidden sm:inline">({relatedMaterials.length})</span>
-                      </div>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>{relatedMaterials.length} materials used</TooltipContent>
-                </Tooltip>
-
-                <Separator orientation="vertical" className="h-5" />
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <div className="flex items-center justify-center h-6 w-6 rounded bg-green-500/10">
-                        <DollarSign className="h-3.5 w-3.5 text-green-500" />
-                      </div>
-                      <div className="flex items-baseline gap-1">
-                        <span className="font-semibold text-sm">{formatCurrency(totalInvoicedAmount)}</span>
-                        <span className="text-xs text-muted-foreground hidden sm:inline">({serviceInvoices.length})</span>
-                      </div>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>{serviceInvoices.length} invoices generated</TooltipContent>
-                </Tooltip>
-              </div>
+                    ) : (
+                      <span className="text-sm text-muted-foreground">No site assigned</span>
+                    )}
+                 </CardContent>
+               </Card>
             </div>
           </div>
 
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+             <Card className="shadow-sm">
+               <CardContent className="p-4 flex flex-col gap-1">
+                 <span className="text-xs font-medium text-muted-foreground uppercase">Progress</span>
+                 <div className="flex items-end justify-between">
+                   <span className="text-2xl font-bold">{completedTasks}/{serviceTasks.length}</span>
+                   <span className="text-xs text-muted-foreground mb-1">Tasks</span>
+                 </div>
+                 <Progress value={taskCompletionPercentage} className="h-1 mt-2" />
+               </CardContent>
+             </Card>
+
+             <Card className="shadow-sm">
+               <CardContent className="p-4 flex flex-col gap-1">
+                 <span className="text-xs font-medium text-muted-foreground uppercase">Time Logged</span>
+                 <div className="flex items-end justify-between">
+                   <span className="text-2xl font-bold">{totalHours.toFixed(1)}h</span>
+                   <span className="text-xs text-muted-foreground mb-1">/ {totalEstimatedHours}h est.</span>
+                 </div>
+                 <div className="w-full h-1 bg-muted rounded-full mt-2 overflow-hidden">
+                    <div className="h-full bg-blue-500 rounded-full" style={{ width: `${Math.min((totalHours / (totalEstimatedHours || 1)) * 100, 100)}%` }} />
+                 </div>
+               </CardContent>
+             </Card>
+
+             <Card className="shadow-sm">
+               <CardContent className="p-4 flex flex-col gap-1">
+                 <span className="text-xs font-medium text-muted-foreground uppercase">Materials</span>
+                 <div className="flex items-end justify-between">
+                   <span className="text-2xl font-bold">{formatCurrency(totalMaterialCost)}</span>
+                   <span className="text-xs text-muted-foreground mb-1">{relatedMaterials.length} items</span>
+                 </div>
+                 <div className="w-full h-1 bg-muted rounded-full mt-2" />
+               </CardContent>
+             </Card>
+
+             <Card className="shadow-sm">
+               <CardContent className="p-4 flex flex-col gap-1">
+                 <span className="text-xs font-medium text-muted-foreground uppercase">Invoiced</span>
+                 <div className="flex items-end justify-between">
+                   <span className="text-2xl font-bold">{formatCurrency(totalInvoicedAmount)}</span>
+                   <span className="text-xs text-muted-foreground mb-1">{serviceInvoices.length} inv.</span>
+                 </div>
+                  <div className="w-full h-1 bg-muted rounded-full mt-2" />
+               </CardContent>
+             </Card>
+          </div>
+
           {/* Tabs Section */}
-          <Tabs defaultValue="tasks" className="space-y-4">
-            <TabsList className="h-9 p-0.5 bg-muted/50">
-              <TabsTrigger value="tasks" className="gap-1.5 text-xs h-8 px-3 data-[state=active]:shadow-sm">
-                <ListTodo className="h-3.5 w-3.5" />
-                Tasks
-                {serviceTasks.length > 0 && (
-                  <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">
-                    {serviceTasks.length}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="time-materials" className="gap-1.5 text-xs h-8 px-3 data-[state=active]:shadow-sm">
-                <Timer className="h-3.5 w-3.5" />
-                Time & Materials
-              </TabsTrigger>
-              <TabsTrigger value="invoices" className="gap-1.5 text-xs h-8 px-3 data-[state=active]:shadow-sm">
-                <Receipt className="h-3.5 w-3.5" />
-                Invoices
-                {serviceInvoices.length > 0 && (
-                  <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">
-                    {serviceInvoices.length}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger value="details" className="gap-1.5 text-xs h-8 px-3 data-[state=active]:shadow-sm">
-                <FileText className="h-3.5 w-3.5" />
-                Details
-              </TabsTrigger>
-            </TabsList>
+          <Tabs defaultValue="tasks" className="space-y-6">
+            <div className="border-b">
+              <TabsList className="h-auto w-full justify-start gap-6 bg-transparent p-0 rounded-none">
+                <TabsTrigger 
+                  value="tasks" 
+                  className="rounded-none border-b-2 border-transparent px-0 py-2 font-medium text-muted-foreground hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground bg-transparent shadow-none"
+                >
+                  Tasks
+                  {serviceTasks.length > 0 && (
+                    <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
+                      {serviceTasks.length}
+                    </span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="time-materials" 
+                  className="rounded-none border-b-2 border-transparent px-0 py-2 font-medium text-muted-foreground hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground bg-transparent shadow-none"
+                >
+                  Time & Materials
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="invoices" 
+                  className="rounded-none border-b-2 border-transparent px-0 py-2 font-medium text-muted-foreground hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground bg-transparent shadow-none"
+                >
+                  Invoices
+                  {serviceInvoices.length > 0 && (
+                    <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
+                      {serviceInvoices.length}
+                    </span>
+                  )}
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="details" 
+                  className="rounded-none border-b-2 border-transparent px-0 py-2 font-medium text-muted-foreground hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground bg-transparent shadow-none"
+                >
+                  Details
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
             <TabsContent value="details" className="space-y-4 mt-4">
               <div className="grid gap-4 lg:grid-cols-2">
@@ -694,123 +674,7 @@ export default function ServiceCallDetailPage() {
           </Tabs>
         </div>
 
-        {/* Status Update Dialog */}
-        <Dialog open={statusDialogOpen} onOpenChange={setStatusDialogOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Update Status</DialogTitle>
-              <DialogDescription>
-                Change the status of this service call
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-3">
-                <Label className="text-xs text-muted-foreground uppercase tracking-wide">
-                  Current Status
-                </Label>
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                  <StatusBadge status={serviceCall.status} />
-                  <span className="text-sm text-muted-foreground">Current state</span>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <Label htmlFor="status" className="text-xs text-muted-foreground uppercase tracking-wide">
-                  New Status
-                </Label>
-                {SERVICE_CALL_TRANSITIONS[serviceCall.status].length === 0 ? (
-                  <p className="text-sm text-muted-foreground p-3 rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800">
-                    This service call is in a terminal state and cannot be changed.
-                  </p>
-                ) : (
-                  <Select
-                    value={selectedStatus}
-                    onValueChange={(value) => setSelectedStatus(value as ServiceCallStatus)}
-                  >
-                    <SelectTrigger id="status" className="h-11">
-                      <SelectValue placeholder="Select new status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {SERVICE_CALL_STATUS_OPTIONS
-                        .filter((option) =>
-                          option.value === serviceCall.status ||
-                          SERVICE_CALL_TRANSITIONS[serviceCall.status].includes(option.value)
-                        )
-                        .map((option) => (
-                          <SelectItem
-                            key={option.value}
-                            value={option.value}
-                            disabled={option.value === serviceCall.status}
-                          >
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setStatusDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button
-                onClick={handleStatusUpdate}
-                disabled={SERVICE_CALL_TRANSITIONS[serviceCall.status].length === 0}
-              >
-                Update Status
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Priority Update Dialog */}
-        <Dialog open={priorityDialogOpen} onOpenChange={setPriorityDialogOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Update Priority</DialogTitle>
-              <DialogDescription>
-                Change the priority level of this service call
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-3">
-                <Label className="text-xs text-muted-foreground uppercase tracking-wide">
-                  Current Priority
-                </Label>
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                  <PriorityBadge priority={serviceCall.priority} />
-                  <span className="text-sm text-muted-foreground">Current level</span>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <Label htmlFor="priority" className="text-xs text-muted-foreground uppercase tracking-wide">
-                  New Priority
-                </Label>
-                <Select
-                  value={selectedPriority}
-                  onValueChange={(value) => setSelectedPriority(value as ServiceCallPriority)}
-                >
-                  <SelectTrigger id="priority" className="h-11">
-                    <SelectValue placeholder="Select new priority" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PRIORITY_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setPriorityDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button onClick={handlePriorityUpdate}>Update Priority</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* Dialogs removed as they are replaced by DropdownMenu interactions */}
       </div>
     </TooltipProvider>
   )

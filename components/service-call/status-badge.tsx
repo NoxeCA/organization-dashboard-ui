@@ -18,11 +18,18 @@ import {
   Zap,
   Minus,
   ArrowUp,
+  ChevronDown,
 } from 'lucide-react'
 import type { ServiceCallStatus, ServiceCallPriority } from '@/lib/types'
 
 interface StatusBadgeProps {
   status: ServiceCallStatus
+  className?: string
+  showIcon?: boolean
+}
+
+interface PriorityBadgeProps {
+  priority: ServiceCallPriority
   className?: string
   showIcon?: boolean
 }
@@ -35,6 +42,13 @@ const statusIcons: Record<ServiceCallStatus, React.ComponentType<{ className?: s
   closed: XCircle,
 }
 
+const priorityIcons: Record<ServiceCallPriority, React.ComponentType<{ className?: string }>> = {
+  low: Minus,
+  medium: ArrowUp,
+  high: AlertTriangle,
+  critical: Zap,
+}
+
 export function StatusBadge({ status, className, showIcon = true }: StatusBadgeProps) {
   const statusLabel = SERVICE_CALL_STATUS_OPTIONS.find((s) => s.value === status)?.label || status
   const Icon = statusIcons[status]
@@ -43,27 +57,15 @@ export function StatusBadge({ status, className, showIcon = true }: StatusBadgeP
     <Badge
       className={cn(
         SERVICE_CALL_STATUS_COLORS[status],
-        "gap-1.5 font-medium transition-all hover:scale-105",
+        "gap-1.5 font-medium transition-all hover:scale-105 group",
         className
       )}
     >
       {showIcon && Icon && <Icon className="h-3 w-3" />}
       {statusLabel}
+      <ChevronDown className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity ml-0.5" />
     </Badge>
   )
-}
-
-interface PriorityBadgeProps {
-  priority: ServiceCallPriority
-  className?: string
-  showIcon?: boolean
-}
-
-const priorityIcons: Record<ServiceCallPriority, React.ComponentType<{ className?: string }>> = {
-  low: Minus,
-  medium: ArrowUp,
-  high: AlertTriangle,
-  critical: Zap,
 }
 
 export function PriorityBadge({ priority, className, showIcon = true }: PriorityBadgeProps) {
@@ -74,12 +76,13 @@ export function PriorityBadge({ priority, className, showIcon = true }: Priority
     <Badge
       className={cn(
         PRIORITY_COLORS[priority],
-        "gap-1.5 font-medium transition-all hover:scale-105",
+        "gap-1.5 font-medium transition-all hover:scale-105 group",
         className
       )}
     >
       {showIcon && Icon && <Icon className="h-3 w-3" />}
       {priorityLabel}
+      <ChevronDown className="h-3 w-3 opacity-50 group-hover:opacity-100 transition-opacity ml-0.5" />
     </Badge>
   )
 }

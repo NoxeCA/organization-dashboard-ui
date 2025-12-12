@@ -9,6 +9,12 @@ export type InvoiceLineType = 'labor' | 'material' | 'travel' | 'other'
 export type IssueType = 'network' | 'hardware' | 'software' | 'installation' | 'maintenance' | 'other'
 export type POStatus = 'draft' | 'sent' | 'approved' | 'received' | 'cancelled'
 
+// Service Call Site Association
+export interface ServiceCallSite {
+  siteId: string
+  isMainBillingSite: boolean
+}
+
 // Reference Entities
 export interface Site {
   id: string
@@ -46,7 +52,10 @@ export interface ServiceCall {
   description: string
   priority: ServiceCallPriority
   status: ServiceCallStatus
-  siteId: string
+  customerId: string              // Direct customer reference
+  siteId: string                  // Main billing site (for backwards compatibility)
+  sites?: ServiceCallSite[]       // All selected sites with main billing flag
+  ownerId?: string                // Service Call owner (single employee)
   requesterName: string
   requesterContact?: string
   issueType: IssueType
@@ -64,9 +73,11 @@ export interface Task {
   title: string
   description?: string
   status: TaskStatus
+  ownerId?: string           // Task owner (single employee)
   assignedEmployees: string[]
   estimatedHours?: number
   sortOrder?: number         // Order within group
+  dueDate?: string           // Optional due date ISO string
   createdAt: string
   completedAt?: string
 }
@@ -156,7 +167,8 @@ export interface ServiceCallFormData {
   title: string
   description: string
   priority: ServiceCallPriority
-  siteId: string
+  customerId: string              // Selected customer
+  sites: ServiceCallSite[]        // Selected sites with main billing flag
   requesterName: string
   requesterContact?: string
   issueType: IssueType
@@ -166,6 +178,7 @@ export interface ServiceCallFormData {
 export interface TaskFormData {
   title: string
   description?: string
+  ownerId?: string           // Task owner
   assignedEmployees: string[]
   estimatedHours?: number
   groupId?: string           // Optional group assignment

@@ -49,6 +49,7 @@ interface DataContextType {
   employees: Employee[]
   suppliers: Supplier[]
   customers: Customer[]
+  getSitesForCustomer: (customerId: string) => Site[]
 
   // Service Calls
   serviceCalls: ServiceCall[]
@@ -129,12 +130,32 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [invoicesState, setInvoices] = useState<Invoice[]>(initialInvoices)
   const [invoiceLineItemsState, setInvoiceLineItems] = useState<InvoiceLineItem[]>(initialInvoiceLineItems)
 
+  // Helper function to get sites for a customer
+  const getSitesForCustomer = useCallback(
+    (customerId: string) => sites.filter((s) => s.customerId === customerId),
+    []
+  )
+
   // Service Call operations
   const addServiceCall = useCallback((data: ServiceCallFormData): ServiceCall => {
     const now = new Date().toISOString()
+
+    // Find the main billing site from the sites array
+    const mainBillingSite = data.sites.find((s) => s.isMainBillingSite)
+    const mainSiteId = mainBillingSite?.siteId || data.sites[0]?.siteId || ''
+
     const newServiceCall: ServiceCall = {
       id: generateId('SC'),
-      ...data,
+      title: data.title,
+      description: data.description,
+      priority: data.priority,
+      customerId: data.customerId,
+      siteId: mainSiteId,           // Main billing site for backwards compatibility
+      sites: data.sites,            // All selected sites
+      requesterName: data.requesterName,
+      requesterContact: data.requesterContact,
+      issueType: data.issueType,
+      equipmentType: data.equipmentType,
       status: 'open',
       attachments: [],
       createdAt: now,
@@ -235,6 +256,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       groupId: targetGroupId,
       title: data.title,
       description: data.description,
+      ownerId: data.ownerId,
       assignedEmployees: data.assignedEmployees,
       estimatedHours: data.estimatedHours,
       status: 'todo',
@@ -595,6 +617,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     employees,
     suppliers,
     customers,
+    getSitesForCustomer,
 
     // Service Calls
     serviceCalls: serviceCallsState,

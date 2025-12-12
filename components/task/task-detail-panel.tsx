@@ -1,11 +1,14 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { toast } from 'sonner'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Input } from '@/components/ui/input'
+import { Textarea } from '@/components/ui/textarea'
+import { Label } from '@/components/ui/label'
 import {
   Select,
   SelectContent,
@@ -53,12 +56,22 @@ export function TaskDetailPanel({ task, isOpen, onToggle }: TaskDetailPanelProps
     deleteTimeEntry,
     deleteMaterialUsage,
     updateTask,
+    deleteTask,
   } = useData()
 
   const [timeDialogOpen, setTimeDialogOpen] = useState(false)
   const [materialDialogOpen, setMaterialDialogOpen] = useState(false)
   const [deleteTimeId, setDeleteTimeId] = useState<string | null>(null)
   const [deleteMaterialId, setDeleteMaterialId] = useState<string | null>(null)
+  const [deleteTaskDialogOpen, setDeleteTaskDialogOpen] = useState(false)
+
+  // Edit states for fields that don't auto-save on every keystroke
+  const [description, setDescription] = useState(task.description || '')
+  
+  // Sync local state with prop
+  useEffect(() => {
+    setDescription(task.description || '')
+  }, [task.description])
 
   const timeEntries = getTimeEntriesForTask(task.id)
   const materials = getMaterialsForTask(task.id)
@@ -123,6 +136,18 @@ export function TaskDetailPanel({ task, isOpen, onToggle }: TaskDetailPanelProps
     toast.success('Material deleted')
   }
 
+  const handleDeleteTask = () => {
+    deleteTask(task.id)
+    toast.success('Task deleted')
+    setDeleteTaskDialogOpen(false)
+  }
+
+  const handleDescriptionBlur = () => {
+    if (description !== task.description) {
+      updateTask(task.id, { description })
+    }
+  }
+
   return (
     <>
       <Collapsible open={isOpen} onOpenChange={onToggle}>
@@ -139,51 +164,87 @@ export function TaskDetailPanel({ task, isOpen, onToggle }: TaskDetailPanelProps
           </Button>
         </CollapsibleTrigger>
 
-        <CollapsibleContent className="mt-4 space-y-4">
+        <CollapsibleContent className="mt-4 space-y-6">
+          {/* Header Actions */}
+          <div className="flex justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8"
+              onClick={() => setDeleteTaskDialogOpen(true)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Task
+            </Button>
+          </div>
+
           {/* Task Info */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h4 className="text-sm font-semibold">Status</h4>
-              <Select
-                value={task.status}
-                onValueChange={handleStatusChange}
-                disabled={validTransitions.length === 0}
-              >
-                <SelectTrigger className="w-[180px]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableStatusOptions.map((option) => (
-                    <SelectItem
-                      key={option.value}
-                      value={option.value}
-                      disabled={option.value === task.status}
-                    >
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="grid gap-6">
+            <div className="grid gap-2">
+              <Label htmlFor="title">Task Title</Label>
+              <Input
+                id="title"
+                value={task.title}
+                onChange={(e) => updateTask(task.id, { title: e.target.value })}
+                className="font-medium"
+              />
             </div>
 
-            <Separator />
+            <div className="grid gap-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                placeholder="Add a description..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                onBlur={handleDescriptionBlur}
+                className="min-h-[100px] resize-none"
+              />
+            </div>
 
-            <div>
-              <h4 className="text-sm font-semibold mb-2">Assigned Employees</h4>
-              <div className="flex flex-wrap gap-2">
-                {assignedEmps.map(emp => (
-                  <div key={emp.id} className="flex items-center gap-2 bg-muted px-3 py-1.5 rounded-md">
-                    <Avatar className="h-6 w-6">
-                      <AvatarFallback className="text-xs bg-primary/10">
-                        {getInitials(emp.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="text-sm">
-                      <div className="font-medium">{emp.name}</div>
-                      <div className="text-xs text-muted-foreground">{emp.role}</div>
-                    </div>
-                  </div>
-                ))}
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Status</Label>
+                <Select
+                  value={task.status}
+                  onValueChange={handleStatusChange}
+                  disabled={validTransitions.length === 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableStatusOptions.map((option) => (
+                      <SelectItem
+                        key={option.value}
+                        value={option.value}
+                        disabled={option.value === task.status}
+                      >
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Assigned Employees</Label>
+                <div className="flex flex-wrap gap-2 min-h-[40px] p-1 border rounded-md bg-muted/20">
+                  {assignedEmps.length === 0 ? (
+                     <span className="text-sm text-muted-foreground p-1">No employees assigned</span>
+                  ) : (
+                    assignedEmps.map(emp => (
+                      <div key={emp.id} className="flex items-center gap-2 bg-background border px-2 py-1 rounded-md shadow-sm">
+                        <Avatar className="h-5 w-5">
+                          <AvatarFallback className="text-[10px]">
+                            {getInitials(emp.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs font-medium">{emp.name}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -419,6 +480,27 @@ export function TaskDetailPanel({ task, isOpen, onToggle }: TaskDetailPanelProps
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      {/* Delete Task Confirmation */}
+      <AlertDialog open={deleteTaskDialogOpen} onOpenChange={setDeleteTaskDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Task?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the task "{task.title}" 
+              along with all its time entries and material records.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteTask}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete Task
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

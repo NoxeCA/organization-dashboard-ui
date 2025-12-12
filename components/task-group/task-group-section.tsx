@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import {
   DndContext,
   DragOverlay,
@@ -33,14 +34,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { TaskGroupAccordion } from './task-group-accordion'
+import { TaskGroupList } from './task-group-list'
 import { TaskGroupDialog } from './task-group-dialog'
-import { TaskCard } from '@/components/task/task-card'
+import { TaskListRow } from '@/components/task/task-list-row'
 import { TaskDialog } from '@/components/task/task-dialog'
 import { useData } from '@/context/data-context'
-import { DEFAULT_GROUP_COLOR } from '@/lib/constants'
+import { DEFAULT_GROUP_COLOR, TASK_STATUS_SOLID_COLORS } from '@/lib/constants'
 import type { Task, TaskGroup, TaskGroupFormData } from '@/lib/types'
-import { Plus, CheckCheck, Circle, Clock, CheckCircle2, XCircle, FolderPlus } from 'lucide-react'
+import { Plus, CheckCheck, Circle, Clock, CheckCircle2, XCircle, FolderPlus, GripVertical } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface TaskGroupSectionProps {
@@ -258,65 +259,65 @@ export function TaskGroupSection({ serviceCallId }: TaskGroupSectionProps) {
 
   return (
     <div className="space-y-3">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <h3 className="text-base font-semibold">Tasks</h3>
-          <Badge variant="secondary" className="text-xs">
-            {allTasks.length} Total
-          </Badge>
+      {/* Header with improved spacing and hierarchy */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between pb-2">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold tracking-tight">Tasks</h3>
+            <span className="flex items-center justify-center bg-muted text-muted-foreground text-xs font-medium h-5 min-w-5 px-1.5 rounded-full">
+              {allTasks.length}
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground">Manage service tasks and phases</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           {incompleteTasks.length > 0 && (
             <Button
               variant="outline"
               size="sm"
+              className="h-8 text-xs"
               onClick={() => setCompleteAllDialogOpen(true)}
             >
-              <CheckCheck className="h-3.5 w-3.5 mr-1" />
+              <CheckCheck className="h-3.5 w-3.5 mr-1.5" />
               Complete All
             </Button>
           )}
           <Button
-            variant="outline"
             size="sm"
+            className="h-8 text-xs"
             onClick={() => setCreateGroupDialogOpen(true)}
           >
-            <FolderPlus className="h-3.5 w-3.5 mr-1" />
-            Add Group
+            <FolderPlus className="h-3.5 w-3.5 mr-1.5" />
+            New Group
           </Button>
         </div>
       </div>
 
-      {/* Status Summary */}
+      {/* Modern Status Pills */}
       {allTasks.length > 0 && (
-        <div className="flex flex-wrap gap-4 px-3 py-2 bg-muted/50 rounded-lg">
+        <div className="flex flex-wrap gap-2 pb-4">
           {statusCounts.todo > 0 && (
-            <div className="flex items-center gap-1.5 text-xs">
-              <Circle className="h-3.5 w-3.5 text-gray-500" />
-              <span className="font-medium">{statusCounts.todo}</span>
-              <span className="text-muted-foreground">To Do</span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-xs font-medium transition-colors hover:bg-slate-200 dark:hover:bg-slate-700">
+              <Circle className="h-3 w-3 fill-current opacity-60" />
+              <span>{statusCounts.todo} To Do</span>
             </div>
           )}
           {statusCounts.in_progress > 0 && (
-            <div className="flex items-center gap-1.5 text-xs">
-              <Clock className="h-3.5 w-3.5 text-blue-500" />
-              <span className="font-medium">{statusCounts.in_progress}</span>
-              <span className="text-muted-foreground">In Progress</span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-xs font-medium transition-colors hover:bg-blue-100 dark:hover:bg-blue-900/30">
+              <Clock className="h-3 w-3 fill-current opacity-60" />
+              <span>{statusCounts.in_progress} In Progress</span>
             </div>
           )}
           {statusCounts.completed > 0 && (
-            <div className="flex items-center gap-1.5 text-xs">
-              <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
-              <span className="font-medium">{statusCounts.completed}</span>
-              <span className="text-muted-foreground">Completed</span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-medium transition-colors hover:bg-emerald-100 dark:hover:bg-emerald-900/30">
+              <CheckCircle2 className="h-3 w-3 fill-current opacity-60" />
+              <span>{statusCounts.completed} Completed</span>
             </div>
           )}
           {statusCounts.cancelled > 0 && (
-            <div className="flex items-center gap-1.5 text-xs">
-              <XCircle className="h-3.5 w-3.5 text-red-500" />
-              <span className="font-medium">{statusCounts.cancelled}</span>
-              <span className="text-muted-foreground">Cancelled</span>
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 text-xs font-medium transition-colors hover:bg-red-100 dark:hover:bg-red-900/30">
+              <XCircle className="h-3 w-3 fill-current opacity-60" />
+              <span>{statusCounts.cancelled} Cancelled</span>
             </div>
           )}
         </div>
@@ -332,45 +333,79 @@ export function TaskGroupSection({ serviceCallId }: TaskGroupSectionProps) {
         onDragEnd={handleDragEnd}
       >
         <SortableContext items={groupIds} strategy={verticalListSortingStrategy}>
-          <div className="space-y-3">
-            {groups.map((group) => {
-              const groupTasks = getTasksForGroup(group.id)
-              return (
-                <TaskGroupAccordion
-                  key={group.id}
-                  group={group}
-                  tasks={groupTasks}
-                  onToggleCollapse={() => toggleGroupCollapse(group.id)}
-                  onEditGroup={() => {
-                    setSelectedGroup(group)
-                    setEditGroupDialogOpen(true)
-                  }}
-                  onDeleteGroup={() => {
-                    setGroupToDelete(group)
-                    setDeleteGroupDialogOpen(true)
-                  }}
-                  onRenameGroup={(name) => updateTaskGroup(group.id, { name })}
-                  onAddTask={() => {
-                    setCreateTaskGroupId(group.id)
-                    setCreateTaskDialogOpen(true)
-                  }}
-                />
-              )
-            })}
-          </div>
+          <AnimatePresence mode="popLayout">
+            <div className="space-y-3">
+              {groups.map((group) => {
+                const groupTasks = getTasksForGroup(group.id)
+                return (
+                  <TaskGroupList
+                    key={group.id}
+                    group={group}
+                    tasks={groupTasks}
+                    onToggleCollapse={() => toggleGroupCollapse(group.id)}
+                    onEditGroup={() => {
+                      setSelectedGroup(group)
+                      setEditGroupDialogOpen(true)
+                    }}
+                    onDeleteGroup={() => {
+                      setGroupToDelete(group)
+                      setDeleteGroupDialogOpen(true)
+                    }}
+                    onRenameGroup={(name) => updateTaskGroup(group.id, { name })}
+                    onAddTask={() => {
+                      setCreateTaskGroupId(group.id)
+                      setCreateTaskDialogOpen(true)
+                    }}
+                  />
+                )
+              })}
+            </div>
+          </AnimatePresence>
         </SortableContext>
 
-        {/* Drag Overlay */}
-        <DragOverlay>
+        {/* Drag Overlay - Enhanced with better styling */}
+        <DragOverlay dropAnimation={{
+          duration: 200,
+          easing: 'cubic-bezier(0.18, 0.67, 0.6, 1.22)',
+        }}>
           {activeTask && (
-            <div className="opacity-80">
-              <TaskCard task={activeTask} />
-            </div>
+            <motion.div
+              initial={{ scale: 1.02, boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}
+              animate={{ scale: 1.02, boxShadow: '0 8px 30px rgba(0,0,0,0.2)' }}
+              className="bg-card rounded-lg border-2 border-primary/20 overflow-hidden"
+            >
+              <div className="flex items-center gap-2 px-3 py-2">
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium text-sm">{activeTask.title}</span>
+                <div className="ml-auto">
+                  <span
+                    className="px-2 py-0.5 rounded text-xs font-medium"
+                    style={{
+                      backgroundColor: TASK_STATUS_SOLID_COLORS[activeTask.status].bg,
+                      color: TASK_STATUS_SOLID_COLORS[activeTask.status].text,
+                    }}
+                  >
+                    {activeTask.status === 'in_progress' ? 'Working' : activeTask.status}
+                  </span>
+                </div>
+              </div>
+            </motion.div>
           )}
           {activeGroup && (
-            <div className="opacity-80 rounded-lg border bg-card p-3">
-              <span className="font-semibold">{activeGroup.name}</span>
-            </div>
+            <motion.div
+              initial={{ scale: 1.02, boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}
+              animate={{ scale: 1.02, boxShadow: '0 8px 30px rgba(0,0,0,0.2)' }}
+              className="rounded-lg border-2 border-primary/20 bg-card p-3"
+            >
+              <div className="flex items-center gap-2">
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
+                <div
+                  className="h-4 w-1 rounded-full"
+                  style={{ backgroundColor: activeGroup.color }}
+                />
+                <span className="font-semibold">{activeGroup.name}</span>
+              </div>
+            </motion.div>
           )}
         </DragOverlay>
       </DndContext>
@@ -414,11 +449,11 @@ export function TaskGroupSection({ serviceCallId }: TaskGroupSectionProps) {
       ) : (
         <Button
           variant="outline"
-          className="w-full justify-start text-muted-foreground"
+          className="w-full justify-center text-muted-foreground border-dashed h-12 hover:bg-muted/50 hover:text-foreground"
           onClick={() => setIsAddingGroup(true)}
         >
           <Plus className="h-4 w-4 mr-2" />
-          Add Group
+          Add New Group
         </Button>
       )}
 

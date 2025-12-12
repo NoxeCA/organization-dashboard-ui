@@ -49,27 +49,36 @@ export const PRIORITY_COLORS: Record<ServiceCallPriority, string> = {
   critical: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
 }
 
-// Task Status
+// Task Status - Monday.com style configuration
 export const TASK_STATUS_OPTIONS: { value: TaskStatus; label: string }[] = [
   { value: 'todo', label: 'To Do' },
-  { value: 'in_progress', label: 'In Progress' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'in_progress', label: 'Working on it' },
+  { value: 'completed', label: 'Done' },
+  { value: 'cancelled', label: 'Stuck' },
 ]
 
 // Task Status Transitions - defines valid status changes
 export const TASK_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
   todo: ['in_progress', 'cancelled'],
   in_progress: ['completed', 'todo', 'cancelled'],
-  completed: [],  // Terminal state
-  cancelled: [],  // Terminal state
+  completed: ['in_progress'],  // Allow reopening
+  cancelled: ['todo', 'in_progress'],  // Allow unstuck
 }
 
+// Monday.com style badge colors (Tailwind classes)
 export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
   todo: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
-  in_progress: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-  completed: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+  in_progress: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400',
+  completed: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400',
+  cancelled: 'bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-400',
+}
+
+// Monday.com style solid colors for status badges
+export const TASK_STATUS_SOLID_COLORS: Record<TaskStatus, { bg: string; text: string }> = {
+  todo: { bg: '#C4C4C4', text: '#FFFFFF' },
+  in_progress: { bg: '#FDAB3D', text: '#FFFFFF' },
+  completed: { bg: '#00C875', text: '#FFFFFF' },
+  cancelled: { bg: '#E2445C', text: '#FFFFFF' },
 }
 
 // Task Group Colors
