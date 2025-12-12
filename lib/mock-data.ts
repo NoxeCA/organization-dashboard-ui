@@ -7,8 +7,6 @@ import type {
   Task,
   TimeEntry,
   MaterialUsage,
-  PurchaseOrder,
-  POLineItem,
   Invoice,
   InvoiceLineItem,
 } from './types'
@@ -239,7 +237,6 @@ export const materialUsages: MaterialUsage[] = [
     unit: 'pcs',
     unitCost: 450,
     source: 'purchased',
-    purchaseOrderId: 'PO-2024-001',
   },
   {
     id: 'MU-002',
@@ -276,88 +273,6 @@ export const materialUsages: MaterialUsage[] = [
     unit: 'L',
     unitCost: 35,
     source: 'stock',
-  },
-]
-
-// Purchase Orders
-export const purchaseOrders: PurchaseOrder[] = [
-  {
-    id: 'PO-2024-001',
-    poNumber: 'PO-2024-001',
-    supplierId: 'SUP-001',
-    status: 'approved',
-    serviceCallId: 'SC-2024-001',
-    totalAmount: 525,
-    createdAt: '2024-12-10T10:00:00Z',
-    expectedDelivery: '2024-12-11',
-  },
-  {
-    id: 'PO-2024-002',
-    poNumber: 'PO-2024-002',
-    supplierId: 'SUP-003',
-    status: 'draft',
-    serviceCallId: 'SC-2024-002',
-    totalAmount: 2850,
-    createdAt: '2024-12-09T14:00:00Z',
-    expectedDelivery: '2024-12-15',
-  },
-]
-
-// PO Line Items
-export const poLineItems: POLineItem[] = [
-  {
-    id: 'PLI-001',
-    purchaseOrderId: 'PO-2024-001',
-    materialName: '24-Port Managed Network Switch',
-    quantity: 1,
-    unit: 'pcs',
-    unitPrice: 450,
-    totalPrice: 450,
-  },
-  {
-    id: 'PLI-002',
-    purchaseOrderId: 'PO-2024-001',
-    materialName: 'Mounting Brackets',
-    quantity: 2,
-    unit: 'pcs',
-    unitPrice: 25,
-    totalPrice: 50,
-  },
-  {
-    id: 'PLI-003',
-    purchaseOrderId: 'PO-2024-001',
-    materialName: 'Patch Cables (1m)',
-    quantity: 10,
-    unit: 'pcs',
-    unitPrice: 2.5,
-    totalPrice: 25,
-  },
-  {
-    id: 'PLI-004',
-    purchaseOrderId: 'PO-2024-002',
-    materialName: 'Access Control Panel',
-    quantity: 1,
-    unit: 'pcs',
-    unitPrice: 1200,
-    totalPrice: 1200,
-  },
-  {
-    id: 'PLI-005',
-    purchaseOrderId: 'PO-2024-002',
-    materialName: 'Card Reader (Proximity)',
-    quantity: 3,
-    unit: 'pcs',
-    unitPrice: 350,
-    totalPrice: 1050,
-  },
-  {
-    id: 'PLI-006',
-    purchaseOrderId: 'PO-2024-002',
-    materialName: 'Door Controller',
-    quantity: 2,
-    unit: 'pcs',
-    unitPrice: 300,
-    totalPrice: 600,
   },
 ]
 
@@ -432,10 +347,6 @@ export function getTimeEntriesForTask(taskId: string): TimeEntry[] {
 
 export function getMaterialsForTask(taskId: string): MaterialUsage[] {
   return materialUsages.filter((mu) => mu.taskId === taskId)
-}
-
-export function getLineItemsForPO(poId: string): POLineItem[] {
-  return poLineItems.filter((li) => li.purchaseOrderId === poId)
 }
 
 export function getLineItemsForInvoice(invoiceId: string): InvoiceLineItem[] {

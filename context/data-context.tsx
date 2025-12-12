@@ -7,8 +7,6 @@ import type {
   Task,
   TimeEntry,
   MaterialUsage,
-  PurchaseOrder,
-  POLineItem,
   Invoice,
   InvoiceLineItem,
   Site,
@@ -19,7 +17,6 @@ import type {
   TaskFormData,
   TimeEntryFormData,
   MaterialUsageFormData,
-  POFormData,
   ServiceCallStatus,
   TaskStatus,
 } from '@/lib/types'
@@ -28,8 +25,6 @@ import {
   tasks as initialTasks,
   timeEntries as initialTimeEntries,
   materialUsages as initialMaterialUsages,
-  purchaseOrders as initialPurchaseOrders,
-  poLineItems as initialPoLineItems,
   invoices as initialInvoices,
   invoiceLineItems as initialInvoiceLineItems,
   sites,
@@ -73,15 +68,6 @@ interface DataContextType {
   updateMaterialUsage: (id: string, data: Partial<MaterialUsage>) => void
   deleteMaterialUsage: (id: string) => void
   getMaterialsForTask: (taskId: string) => MaterialUsage[]
-
-  // Purchase Orders
-  purchaseOrders: PurchaseOrder[]
-  poLineItems: POLineItem[]
-  addPurchaseOrder: (data: POFormData) => PurchaseOrder
-  updatePurchaseOrder: (id: string, data: Partial<PurchaseOrder>) => void
-  deletePurchaseOrder: (id: string) => void
-  getPurchaseOrder: (id: string) => PurchaseOrder | undefined
-  getLineItemsForPO: (poId: string) => POLineItem[]
 
   // Invoices
   invoices: Invoice[]

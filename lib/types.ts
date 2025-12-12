@@ -4,7 +4,6 @@ export type ServiceCallPriority = 'low' | 'medium' | 'high' | 'critical'
 export type TaskStatus = 'todo' | 'in_progress' | 'completed' | 'cancelled'
 export type RateType = 'regular' | 'overtime' | 'weekend' | 'holiday'
 export type MaterialSource = 'stock' | 'purchased' | 'customer_provided'
-export type POStatus = 'draft' | 'submitted' | 'approved' | 'received' | 'cancelled'
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled'
 export type InvoiceLineType = 'labor' | 'material' | 'travel' | 'other'
 export type IssueType = 'network' | 'hardware' | 'software' | 'installation' | 'maintenance' | 'other'
@@ -89,29 +88,6 @@ export interface MaterialUsage {
   unit: string
   unitCost?: number
   source: MaterialSource
-  purchaseOrderId?: string
-}
-
-export interface PurchaseOrder {
-  id: string
-  poNumber: string
-  supplierId: string
-  status: POStatus
-  serviceCallId?: string
-  totalAmount: number
-  createdAt: string
-  expectedDelivery?: string
-  receivedAt?: string
-}
-
-export interface POLineItem {
-  id: string
-  purchaseOrderId: string
-  materialName: string
-  quantity: number
-  unit: string
-  unitPrice: number
-  totalPrice: number
 }
 
 export interface Invoice {
@@ -172,14 +148,6 @@ export interface MaterialUsageFormData {
   unit: string
   unitCost?: number
   source: MaterialSource
-  purchaseOrderId?: string
-}
-
-export interface POFormData {
-  supplierId: string
-  serviceCallId?: string
-  expectedDelivery?: string
-  lineItems: Omit<POLineItem, 'id' | 'purchaseOrderId'>[]
 }
 
 export interface InvoiceFormData {

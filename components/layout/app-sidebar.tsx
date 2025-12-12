@@ -5,7 +5,6 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   ClipboardList,
-  Package,
   FileText,
   Plus,
   Wrench,
@@ -36,21 +35,6 @@ const navigation = [
       {
         title: 'Create New',
         url: '/service-calls/new',
-        icon: Plus,
-      },
-    ],
-  },
-  {
-    title: 'Purchase Orders',
-    items: [
-      {
-        title: 'All POs',
-        url: '/purchase-orders',
-        icon: Package,
-      },
-      {
-        title: 'Create New',
-        url: '/purchase-orders/new',
         icon: Plus,
       },
     ],
@@ -97,7 +81,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               <SidebarMenu>
                 {group.items.map((item) => {
                   const isActive = pathname === item.url ||
-                    (item.url !== '/' && pathname.startsWith(item.url) && item.url !== '/service-calls/new' && item.url !== '/purchase-orders/new')
+                    (item.url !== '/' && pathname.startsWith(item.url) && item.url !== '/service-calls/new')
                   return (
                     <SidebarMenuItem key={item.title}>
                       <SidebarMenuButton asChild isActive={isActive}>

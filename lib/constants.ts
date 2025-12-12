@@ -4,7 +4,6 @@ import type {
   TaskStatus,
   RateType,
   MaterialSource,
-  POStatus,
   InvoiceStatus,
   IssueType,
 } from './types'
@@ -94,23 +93,6 @@ export const MATERIAL_SOURCE_OPTIONS: { value: MaterialSource; label: string }[]
   { value: 'purchased', label: 'Purchased' },
   { value: 'customer_provided', label: 'Customer Provided' },
 ]
-
-// Purchase Order Status
-export const PO_STATUS_OPTIONS: { value: POStatus; label: string }[] = [
-  { value: 'draft', label: 'Draft' },
-  { value: 'submitted', label: 'Submitted' },
-  { value: 'approved', label: 'Approved' },
-  { value: 'received', label: 'Received' },
-  { value: 'cancelled', label: 'Cancelled' },
-]
-
-export const PO_STATUS_COLORS: Record<POStatus, string> = {
-  draft: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
-  submitted: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
-  approved: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  received: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400',
-  cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-}
 
 // Invoice Status
 export const INVOICE_STATUS_OPTIONS: { value: InvoiceStatus; label: string }[] = [
