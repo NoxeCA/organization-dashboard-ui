@@ -39,7 +39,7 @@ import {
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { StatusBadge, PriorityBadge } from '@/components/service-call/status-badge'
-import { TaskSection } from '@/components/service-call/task-section'
+import { TaskGroupSection } from '@/components/task-group'
 import { InvoiceGenerator } from '@/components/invoice/invoice-generator'
 import { useData } from '@/context/data-context'
 import {
@@ -563,7 +563,7 @@ export default function ServiceCallDetailPage() {
             </TabsContent>
 
             <TabsContent value="tasks" className="mt-4">
-              <TaskSection serviceCallId={serviceCall.id} />
+              <TaskGroupSection serviceCallId={serviceCall.id} />
             </TabsContent>
 
             <TabsContent value="time-materials" className="space-y-4 mt-4">

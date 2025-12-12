@@ -72,6 +72,21 @@ export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
   cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
 }
 
+// Task Group Colors
+export const GROUP_COLORS = [
+  { name: 'Blue', value: '#3B82F6' },
+  { name: 'Green', value: '#22C55E' },
+  { name: 'Purple', value: '#A855F7' },
+  { name: 'Orange', value: '#F97316' },
+  { name: 'Pink', value: '#EC4899' },
+  { name: 'Teal', value: '#14B8A6' },
+  { name: 'Yellow', value: '#EAB308' },
+  { name: 'Red', value: '#EF4444' },
+  { name: 'Slate', value: '#64748B' },
+] as const
+
+export const DEFAULT_GROUP_COLOR = GROUP_COLORS[0].value
+
 // Rate Types
 export const RATE_TYPE_OPTIONS: { value: RateType; label: string }[] = [
   { value: 'regular', label: 'Regular' },

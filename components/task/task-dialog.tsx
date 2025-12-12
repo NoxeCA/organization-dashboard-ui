@@ -21,6 +21,13 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
@@ -33,6 +40,7 @@ const taskFormSchema = z.object({
   description: z.string().optional(),
   assignedEmployees: z.array(z.string()).min(1, 'At least one employee must be assigned'),
   estimatedHours: z.number().positive('Estimated hours must be positive').optional().or(z.literal(undefined)),
+  groupId: z.string().optional(),
 })
 
 type TaskFormValues = z.infer<typeof taskFormSchema>
@@ -42,10 +50,13 @@ interface TaskDialogProps {
   onOpenChange: (open: boolean) => void
   serviceCallId: string
   task?: Task
+  defaultGroupId?: string
 }
 
-export function TaskDialog({ open, onOpenChange, serviceCallId, task }: TaskDialogProps) {
-  const { employees, addTask, updateTask } = useData()
+export function TaskDialog({ open, onOpenChange, serviceCallId, task, defaultGroupId }: TaskDialogProps) {
+  const { employees, addTask, updateTask, getTaskGroupsForServiceCall } = useData()
+
+  const groups = getTaskGroupsForServiceCall(serviceCallId)
 
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskFormSchema),
@@ -54,6 +65,7 @@ export function TaskDialog({ open, onOpenChange, serviceCallId, task }: TaskDial
       description: task?.description || '',
       assignedEmployees: task?.assignedEmployees || [],
       estimatedHours: task?.estimatedHours || undefined,
+      groupId: task?.groupId || defaultGroupId || undefined,
     },
   })
 
@@ -121,6 +133,42 @@ export function TaskDialog({ open, onOpenChange, serviceCallId, task }: TaskDial
                 </FormItem>
               )}
             />
+
+            {groups.length > 0 && (
+              <FormField
+                control={form.control}
+                name="groupId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Group</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a group" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {groups.map((group) => (
+                          <SelectItem key={group.id} value={group.id}>
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="h-3 w-3 rounded-full"
+                                style={{ backgroundColor: group.color }}
+                              />
+                              {group.name}
+                            </div>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Optional: Assign this task to a group
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}

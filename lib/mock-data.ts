@@ -5,10 +5,13 @@ import type {
   Customer,
   ServiceCall,
   Task,
+  TaskGroup,
   TimeEntry,
   MaterialUsage,
   Invoice,
   InvoiceLineItem,
+  PurchaseOrder,
+  POLineItem,
 } from './types'
 
 // Reference Data
@@ -106,58 +109,123 @@ export const serviceCalls: ServiceCall[] = [
   },
 ]
 
+// Task Groups
+export const taskGroups: TaskGroup[] = [
+  {
+    id: 'TG-001',
+    serviceCallId: 'SC-2024-001',
+    name: 'General',
+    color: '#64748B',
+    sortOrder: 0,
+    isDefault: true,
+    isCollapsed: false,
+    createdAt: '2024-12-10T09:00:00Z',
+  },
+  {
+    id: 'TG-002',
+    serviceCallId: 'SC-2024-001',
+    name: 'Diagnosis Phase',
+    color: '#3B82F6',
+    sortOrder: 1,
+    isDefault: false,
+    isCollapsed: false,
+    createdAt: '2024-12-10T09:00:00Z',
+  },
+  {
+    id: 'TG-003',
+    serviceCallId: 'SC-2024-001',
+    name: 'Repair Phase',
+    color: '#22C55E',
+    sortOrder: 2,
+    isDefault: false,
+    isCollapsed: false,
+    dueDate: '2024-12-15',
+    createdAt: '2024-12-10T09:00:00Z',
+  },
+  {
+    id: 'TG-004',
+    serviceCallId: 'SC-2024-002',
+    name: 'General',
+    color: '#64748B',
+    sortOrder: 0,
+    isDefault: true,
+    isCollapsed: false,
+    createdAt: '2024-12-09T11:00:00Z',
+  },
+  {
+    id: 'TG-005',
+    serviceCallId: 'SC-2024-003',
+    name: 'General',
+    color: '#64748B',
+    sortOrder: 0,
+    isDefault: true,
+    isCollapsed: false,
+    createdAt: '2024-12-08T16:00:00Z',
+  },
+]
+
 // Tasks
 export const tasks: Task[] = [
   {
     id: 'TK-001',
     serviceCallId: 'SC-2024-001',
+    groupId: 'TG-002', // Diagnosis Phase
     title: 'Diagnose network connectivity',
     description: 'Check network cables, switches, and router configurations to identify the source of connectivity issues.',
     status: 'completed',
     assignedEmployees: ['EMP-001'],
     estimatedHours: 2,
+    sortOrder: 0,
     createdAt: '2024-12-10T09:30:00Z',
     completedAt: '2024-12-10T12:00:00Z',
   },
   {
     id: 'TK-002',
     serviceCallId: 'SC-2024-001',
+    groupId: 'TG-003', // Repair Phase
     title: 'Replace faulty network switch',
     description: 'Replace the faulty 24-port switch identified during diagnosis.',
     status: 'in_progress',
     assignedEmployees: ['EMP-001', 'EMP-002'],
     estimatedHours: 3,
+    sortOrder: 0,
     createdAt: '2024-12-10T12:30:00Z',
   },
   {
     id: 'TK-003',
     serviceCallId: 'SC-2024-002',
+    groupId: 'TG-004', // General
     title: 'Site survey and planning',
     description: 'Conduct site survey to determine optimal placement of card readers and door controllers.',
     status: 'todo',
     assignedEmployees: ['EMP-004'],
     estimatedHours: 4,
+    sortOrder: 0,
     createdAt: '2024-12-09T11:30:00Z',
   },
   {
     id: 'TK-004',
     serviceCallId: 'SC-2024-003',
+    groupId: 'TG-005', // General
     title: 'Inspect HVAC unit',
     description: 'Inspect the server room HVAC unit for any malfunctions or failures.',
     status: 'completed',
     assignedEmployees: ['EMP-002'],
     estimatedHours: 1,
+    sortOrder: 0,
     createdAt: '2024-12-08T16:30:00Z',
     completedAt: '2024-12-08T18:00:00Z',
   },
   {
     id: 'TK-005',
     serviceCallId: 'SC-2024-003',
+    groupId: 'TG-005', // General
     title: 'Replace HVAC filter and clean unit',
     description: 'Replace clogged filter and perform general maintenance on HVAC unit.',
     status: 'completed',
     assignedEmployees: ['EMP-002', 'EMP-003'],
     estimatedHours: 2,
+    sortOrder: 1,
     createdAt: '2024-12-09T08:00:00Z',
     completedAt: '2024-12-09T10:00:00Z',
   },
@@ -292,6 +360,12 @@ export const invoices: Invoice[] = [
   },
 ]
 
+// Purchase Orders
+export const purchaseOrders: PurchaseOrder[] = []
+
+// PO Line Items
+export const poLineItems: POLineItem[] = []
+
 // Invoice Line Items
 export const invoiceLineItems: InvoiceLineItem[] = [
   {
@@ -373,4 +447,8 @@ export function getCustomerForSite(siteId: string): Customer | undefined {
   const site = getSiteById(siteId)
   if (!site) return undefined
   return getCustomerById(site.customerId)
+}
+
+export function getTaskGroupsForServiceCall(serviceCallId: string): TaskGroup[] {
+  return taskGroups.filter((tg) => tg.serviceCallId === serviceCallId).sort((a, b) => a.sortOrder - b.sortOrder)
 }

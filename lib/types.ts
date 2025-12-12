@@ -7,6 +7,7 @@ export type MaterialSource = 'stock' | 'purchased' | 'customer_provided'
 export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled'
 export type InvoiceLineType = 'labor' | 'material' | 'travel' | 'other'
 export type IssueType = 'network' | 'hardware' | 'software' | 'installation' | 'maintenance' | 'other'
+export type POStatus = 'draft' | 'sent' | 'approved' | 'received' | 'cancelled'
 
 // Reference Entities
 export interface Site {
@@ -59,13 +60,27 @@ export interface ServiceCall {
 export interface Task {
   id: string
   serviceCallId: string
+  groupId?: string           // Reference to TaskGroup
   title: string
   description?: string
   status: TaskStatus
   assignedEmployees: string[]
   estimatedHours?: number
+  sortOrder?: number         // Order within group
   createdAt: string
   completedAt?: string
+}
+
+export interface TaskGroup {
+  id: string
+  serviceCallId: string
+  name: string
+  color: string              // Hex color, e.g., "#3B82F6"
+  sortOrder: number
+  isDefault: boolean         // True for "General" - can't be deleted
+  isCollapsed: boolean       // Collapse state
+  dueDate?: string           // Optional ISO date
+  createdAt: string
 }
 
 export interface TimeEntry {
@@ -114,6 +129,28 @@ export interface InvoiceLineItem {
   taskId?: string
 }
 
+export interface PurchaseOrder {
+  id: string
+  poNumber: string
+  supplierId: string
+  serviceCallId: string
+  expectedDelivery: string
+  status: POStatus
+  totalAmount: number
+  createdAt: string
+  receivedAt?: string
+}
+
+export interface POLineItem {
+  id: string
+  purchaseOrderId: string
+  materialName: string
+  quantity: number
+  unit: string
+  unitPrice: number
+  totalPrice: number
+}
+
 // Form Types
 export interface ServiceCallFormData {
   title: string
@@ -131,6 +168,25 @@ export interface TaskFormData {
   description?: string
   assignedEmployees: string[]
   estimatedHours?: number
+  groupId?: string           // Optional group assignment
+}
+
+export interface TaskGroupFormData {
+  name: string
+  color: string
+  dueDate?: string
+}
+
+export interface POFormData {
+  supplierId: string
+  serviceCallId: string
+  expectedDelivery: string
+  lineItems: {
+    materialName: string
+    quantity: number
+    unit: string
+    unitPrice: number
+  }[]
 }
 
 export interface TimeEntryFormData {
