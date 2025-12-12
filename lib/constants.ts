@@ -6,7 +6,95 @@ import type {
   MaterialSource,
   InvoiceStatus,
   IssueType,
+  Currency,
+  TaxCode,
+  PaymentMethod,
 } from './types'
+
+// Currencies
+export const CURRENCIES: Currency[] = [
+  { code: 'USD', symbol: '$', name: 'US Dollar', decimalPlaces: 2, symbolPosition: 'before' },
+  { code: 'EUR', symbol: '€', name: 'Euro', decimalPlaces: 2, symbolPosition: 'before' },
+  { code: 'GBP', symbol: '£', name: 'British Pound', decimalPlaces: 2, symbolPosition: 'before' },
+  { code: 'CAD', symbol: 'CA$', name: 'Canadian Dollar', decimalPlaces: 2, symbolPosition: 'before' },
+  { code: 'AUD', symbol: 'A$', name: 'Australian Dollar', decimalPlaces: 2, symbolPosition: 'before' },
+  { code: 'JPY', symbol: '¥', name: 'Japanese Yen', decimalPlaces: 0, symbolPosition: 'before' },
+  { code: 'CHF', symbol: 'CHF', name: 'Swiss Franc', decimalPlaces: 2, symbolPosition: 'after' },
+]
+
+export const DEFAULT_CURRENCY = 'USD'
+
+// Get currency by code
+export function getCurrency(code: string): Currency | undefined {
+  return CURRENCIES.find(c => c.code === code)
+}
+
+// Tax Codes
+export const TAX_CODES: TaxCode[] = [
+  {
+    id: 'standard',
+    code: 'STD',
+    name: 'Standard Rate',
+    rate: 0.09,
+    description: 'Standard tax rate (9%)',
+    isDefault: true,
+  },
+  {
+    id: 'reduced',
+    code: 'RED',
+    name: 'Reduced Rate',
+    rate: 0.05,
+    description: 'Reduced tax rate (5%)',
+    isDefault: false,
+  },
+  {
+    id: 'zero',
+    code: 'ZERO',
+    name: 'Zero Rate',
+    rate: 0,
+    description: 'Zero-rated goods and services',
+    isDefault: false,
+  },
+  {
+    id: 'exempt',
+    code: 'EXEMPT',
+    name: 'Tax Exempt',
+    rate: 0,
+    description: 'Exempt from tax',
+    isDefault: false,
+  },
+]
+
+export const DEFAULT_TAX_CODE_ID = 'standard'
+
+// Get tax code by ID
+export function getTaxCode(id: string): TaxCode | undefined {
+  return TAX_CODES.find(tc => tc.id === id)
+}
+
+// Get default tax code
+export function getDefaultTaxCode(): TaxCode {
+  return TAX_CODES.find(tc => tc.isDefault) || TAX_CODES[0]
+}
+
+// Payment Methods
+export const PAYMENT_METHOD_OPTIONS: { value: PaymentMethod; label: string }[] = [
+  { value: 'bank_transfer', label: 'Bank Transfer' },
+  { value: 'check', label: 'Check' },
+  { value: 'credit_card', label: 'Credit Card' },
+  { value: 'cash', label: 'Cash' },
+  { value: 'other', label: 'Other' },
+]
+
+// Invoice Cancellation Reasons
+export const CANCELLATION_REASONS = [
+  'Duplicate invoice',
+  'Customer request',
+  'Incorrect amounts',
+  'Service cancelled',
+  'Billing error',
+  'Other',
+] as const
 
 // Service Call Status
 export const SERVICE_CALL_STATUS_OPTIONS: { value: ServiceCallStatus; label: string }[] = [
@@ -148,6 +236,7 @@ export const MATERIAL_SOURCE_OPTIONS: { value: MaterialSource; label: string }[]
 export const INVOICE_STATUS_OPTIONS: { value: InvoiceStatus; label: string }[] = [
   { value: 'draft', label: 'Draft' },
   { value: 'sent', label: 'Sent' },
+  { value: 'partially_paid', label: 'Partially Paid' },
   { value: 'paid', label: 'Paid' },
   { value: 'overdue', label: 'Overdue' },
   { value: 'cancelled', label: 'Cancelled' },
@@ -156,9 +245,30 @@ export const INVOICE_STATUS_OPTIONS: { value: InvoiceStatus; label: string }[] =
 export const INVOICE_STATUS_COLORS: Record<InvoiceStatus, string> = {
   draft: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
   sent: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400',
+  partially_paid: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400',
   paid: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
   overdue: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400',
   cancelled: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
+}
+
+// Invoice Status Transitions - defines valid status changes
+export const INVOICE_TRANSITIONS: Record<InvoiceStatus, InvoiceStatus[]> = {
+  draft: ['sent', 'cancelled'],
+  sent: ['partially_paid', 'paid', 'overdue', 'cancelled'],
+  partially_paid: ['paid', 'overdue', 'cancelled'],
+  overdue: ['partially_paid', 'paid', 'cancelled'],
+  paid: [],                    // Terminal state
+  cancelled: ['draft'],        // Can revert to draft (re-open)
+}
+
+// Invoice Status Actions - what actions are available for each status
+export const INVOICE_STATUS_ACTIONS: Record<InvoiceStatus, string[]> = {
+  draft: ['edit', 'send', 'preview', 'delete'],
+  sent: ['record_payment', 'send_reminder', 'preview', 'download', 'cancel'],
+  partially_paid: ['record_payment', 'send_reminder', 'preview', 'download', 'cancel'],
+  overdue: ['record_payment', 'send_reminder', 'preview', 'download', 'cancel'],
+  paid: ['preview', 'download'],
+  cancelled: ['reopen', 'preview'],
 }
 
 // Issue Types
@@ -184,11 +294,24 @@ export const UNIT_OPTIONS = [
 ]
 
 // Format helpers
-export function formatCurrency(amount: number): string {
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(amount)
+export function formatCurrency(amount: number, currencyCode: string = 'USD'): string {
+  const currency = getCurrency(currencyCode)
+  if (!currency) {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currencyCode,
+    }).format(amount)
+  }
+
+  const formatted = amount.toFixed(currency.decimalPlaces)
+  const withCommas = parseFloat(formatted).toLocaleString('en-US', {
+    minimumFractionDigits: currency.decimalPlaces,
+    maximumFractionDigits: currency.decimalPlaces,
+  })
+
+  return currency.symbolPosition === 'before'
+    ? `${currency.symbol}${withCommas}`
+    : `${withCommas} ${currency.symbol}`
 }
 
 export function formatDate(dateString: string): string {

@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { PageHeader } from '@/components/layout/page-header'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
   TableBody,
@@ -23,21 +24,80 @@ import {
 import { InvoiceStatusBadge } from '@/components/invoice/invoice-status-badge'
 import { useData } from '@/context/data-context'
 import { formatCurrency, formatDate, INVOICE_STATUS_OPTIONS } from '@/lib/constants'
-import { Eye } from 'lucide-react'
+import { Eye, DollarSign, AlertTriangle, CheckCircle, FileText } from 'lucide-react'
 import type { InvoiceStatus } from '@/lib/types'
 
 export default function InvoicesPage() {
   const router = useRouter()
-  const { invoices, customers, serviceCalls, sites } = useData()
+  const { invoices, customers, serviceCalls } = useData()
   const [statusFilter, setStatusFilter] = useState<InvoiceStatus | 'all'>('all')
   const [customerFilter, setCustomerFilter] = useState<string>('all')
 
-  const filteredInvoices = useMemo(() => {
-    return invoices.filter((invoice) => {
-      if (statusFilter !== 'all' && invoice.status !== statusFilter) return false
-      if (customerFilter !== 'all' && invoice.customerId !== customerFilter) return false
-      return true
+  // Calculate dashboard metrics
+  const metrics = useMemo(() => {
+    const now = new Date()
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+
+    // Group invoices by currency for accurate totals
+    const byCurrency: Record<string, {
+      outstanding: number
+      overdue: number
+      paidThisMonth: number
+      draft: number
+    }> = {}
+
+    invoices.forEach((invoice) => {
+      const currency = invoice.currency || 'USD'
+      if (!byCurrency[currency]) {
+        byCurrency[currency] = { outstanding: 0, overdue: 0, paidThisMonth: 0, draft: 0 }
+      }
+
+      // Outstanding: sent, partially_paid, overdue
+      if (['sent', 'partially_paid', 'overdue'].includes(invoice.status)) {
+        byCurrency[currency].outstanding += invoice.amountDue
+      }
+
+      // Overdue
+      if (invoice.status === 'overdue') {
+        byCurrency[currency].overdue += invoice.amountDue
+      }
+
+      // Paid this month
+      if (invoice.status === 'paid' && invoice.paidDate) {
+        const paidDate = new Date(invoice.paidDate)
+        if (paidDate >= startOfMonth) {
+          byCurrency[currency].paidThisMonth += invoice.totalAmount
+        }
+      }
+
+      // Draft
+      if (invoice.status === 'draft') {
+        byCurrency[currency].draft += invoice.totalAmount
+      }
     })
+
+    // For display, we'll show USD totals (primary currency)
+    // In a real app, you might want to convert or show multiple currencies
+    const usd = byCurrency['USD'] || { outstanding: 0, overdue: 0, paidThisMonth: 0, draft: 0 }
+
+    return {
+      outstanding: usd.outstanding,
+      overdue: usd.overdue,
+      paidThisMonth: usd.paidThisMonth,
+      draft: usd.draft,
+      totalInvoices: invoices.length,
+      overdueCount: invoices.filter(i => i.status === 'overdue').length,
+    }
+  }, [invoices])
+
+  const filteredInvoices = useMemo(() => {
+    return invoices
+      .filter((invoice) => {
+        if (statusFilter !== 'all' && invoice.status !== statusFilter) return false
+        if (customerFilter !== 'all' && invoice.customerId !== customerFilter) return false
+        return true
+      })
+      .sort((a, b) => new Date(b.issuedDate).getTime() - new Date(a.issuedDate).getTime())
   }, [invoices, statusFilter, customerFilter])
 
   const getCustomerName = (customerId: string) => {
@@ -59,6 +119,62 @@ export default function InvoicesPage() {
 
       <div className="flex-1 overflow-auto p-6">
         <div className="space-y-6">
+          {/* Dashboard Metrics */}
+          <div className="grid gap-4 md:grid-cols-4">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Outstanding</CardTitle>
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatCurrency(metrics.outstanding)}</div>
+                <p className="text-xs text-muted-foreground">
+                  Awaiting payment
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Overdue</CardTitle>
+                <AlertTriangle className="h-4 w-4 text-orange-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-orange-600">{formatCurrency(metrics.overdue)}</div>
+                <p className="text-xs text-muted-foreground">
+                  {metrics.overdueCount} invoice{metrics.overdueCount !== 1 ? 's' : ''} overdue
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Paid This Month</CardTitle>
+                <CheckCircle className="h-4 w-4 text-green-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">{formatCurrency(metrics.paidThisMonth)}</div>
+                <p className="text-xs text-muted-foreground">
+                  Collected this month
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Draft Invoices</CardTitle>
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{formatCurrency(metrics.draft)}</div>
+                <p className="text-xs text-muted-foreground">
+                  Ready to send
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Filters */}
           <div className="flex gap-4">
             <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as InvoiceStatus | 'all')}>
               <SelectTrigger className="w-[200px]">
@@ -89,6 +205,7 @@ export default function InvoicesPage() {
             </Select>
           </div>
 
+          {/* Invoice Table */}
           <div className="border rounded-lg">
             <Table>
               <TableHeader>
@@ -97,16 +214,17 @@ export default function InvoicesPage() {
                   <TableHead>Customer</TableHead>
                   <TableHead>Service Call</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Total Amount</TableHead>
-                  <TableHead>Issued Date</TableHead>
-                  <TableHead>Due Date</TableHead>
+                  <TableHead className="text-right">Total</TableHead>
+                  <TableHead className="text-right">Amount Due</TableHead>
+                  <TableHead>Issued</TableHead>
+                  <TableHead>Due</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredInvoices.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground">
+                    <TableCell colSpan={9} className="text-center text-muted-foreground">
                       No invoices found
                     </TableCell>
                   </TableRow>
@@ -122,15 +240,30 @@ export default function InvoicesPage() {
                         </Link>
                       </TableCell>
                       <TableCell>{getCustomerName(invoice.customerId)}</TableCell>
-                      <TableCell className="max-w-[300px] truncate">
+                      <TableCell className="max-w-[200px] truncate">
                         {getServiceCallTitle(invoice.serviceCallId)}
                       </TableCell>
                       <TableCell>
                         <InvoiceStatusBadge status={invoice.status} />
                       </TableCell>
-                      <TableCell className="text-right">{formatCurrency(invoice.totalAmount)}</TableCell>
+                      <TableCell className="text-right">
+                        {formatCurrency(invoice.totalAmount, invoice.currency)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {invoice.amountDue > 0 ? (
+                          <span className={invoice.status === 'overdue' ? 'text-orange-600 font-medium' : ''}>
+                            {formatCurrency(invoice.amountDue, invoice.currency)}
+                          </span>
+                        ) : (
+                          <span className="text-green-600">Paid</span>
+                        )}
+                      </TableCell>
                       <TableCell>{formatDate(invoice.issuedDate)}</TableCell>
-                      <TableCell>{formatDate(invoice.dueDate)}</TableCell>
+                      <TableCell>
+                        <span className={invoice.status === 'overdue' ? 'text-orange-600' : ''}>
+                          {formatDate(invoice.dueDate)}
+                        </span>
+                      </TableCell>
                       <TableCell className="text-right">
                         <Button
                           variant="ghost"

@@ -5,10 +5,39 @@ export type TaskStatus = 'todo' | 'in_progress' | 'completed' | 'cancelled'
 export type RateType = 'regular' | 'overtime' | 'weekend' | 'holiday'
 export type MaterialSource = 'stock' | 'purchased' | 'customer_provided'
 export type TimeEntryMode = 'manual' | 'duration' | 'start_end' | 'timer'
-export type InvoiceStatus = 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled'
+export type InvoiceStatus = 'draft' | 'sent' | 'partially_paid' | 'paid' | 'overdue' | 'cancelled'
 export type InvoiceLineType = 'labor' | 'material' | 'travel' | 'other'
 export type IssueType = 'network' | 'hardware' | 'software' | 'installation' | 'maintenance' | 'other'
 export type POStatus = 'draft' | 'sent' | 'approved' | 'received' | 'cancelled'
+export type PaymentMethod = 'cash' | 'check' | 'credit_card' | 'bank_transfer' | 'other'
+
+// Currency & Tax Configuration
+export interface Currency {
+  code: string               // ISO 4217 (USD, EUR, GBP, etc.)
+  symbol: string             // $, €, £
+  name: string               // US Dollar, Euro, etc.
+  decimalPlaces: number      // Usually 2
+  symbolPosition: 'before' | 'after'
+}
+
+export interface TaxCode {
+  id: string
+  code: string               // e.g., "VAT-STD", "GST", "EXEMPT"
+  name: string               // e.g., "Standard VAT", "GST", "Tax Exempt"
+  rate: number               // 0.09 for 9%, 0 for exempt
+  description?: string
+  isDefault: boolean
+}
+
+// Address for billing
+export interface Address {
+  line1: string
+  line2?: string
+  city: string
+  state: string
+  postalCode: string
+  country: string
+}
 
 // Service Call Site Association
 export interface ServiceCallSite {
@@ -44,6 +73,15 @@ export interface Customer {
   name: string
   email: string
   phone: string
+  // Billing fields
+  billingAddress?: Address
+  shippingAddress?: Address
+  taxId?: string              // VAT/Tax ID number
+  defaultTaxCodeId: string    // Customer's default tax code
+  defaultCurrency: string     // ISO currency code
+  paymentTermsDays: number    // Default: 30
+  creditLimit?: number
+  notes?: string
 }
 
 // Core Entities
@@ -108,6 +146,10 @@ export interface TimeEntry {
   startTime?: string           // "HH:mm" format
   endTime?: string             // "HH:mm" format
   entryMode?: TimeEntryMode    // How the entry was created
+  // Invoice tracking
+  invoiced: boolean            // Has this been invoiced?
+  invoiceId?: string           // Which invoice includes this?
+  invoicedAt?: string          // When was it invoiced?
 }
 
 export interface ActiveTimer {
@@ -129,6 +171,10 @@ export interface MaterialUsage {
   unit: string
   unitCost?: number
   source: MaterialSource
+  // Invoice tracking
+  invoiced: boolean            // Has this been invoiced?
+  invoiceId?: string           // Which invoice includes this?
+  invoicedAt?: string          // When was it invoiced?
 }
 
 export interface Invoice {
@@ -137,11 +183,54 @@ export interface Invoice {
   serviceCallId: string
   customerId: string
   status: InvoiceStatus
+
+  // Currency
+  currency: string            // ISO currency code (USD, EUR, etc.)
+  exchangeRate?: number       // Rate to base currency at invoice time
+
+  // Tax
+  taxCodeId: string           // Reference to TaxCode
+  taxRate: number             // Snapshot of tax rate at invoice time
+
+  // Amounts (all in invoice currency)
   subtotal: number
+  discountAmount: number
+  discountPercent?: number
+  taxableAmount: number
   taxAmount: number
   totalAmount: number
+  amountPaid: number
+  amountDue: number
+
+  // Dates
   issuedDate: string
   dueDate: string
+  paidDate?: string
+
+  // Payment info
+  paymentTerms: string        // e.g., "Net 30"
+  paymentMethod?: PaymentMethod
+  paymentReference?: string
+
+  // Additional info
+  notes?: string              // Shown on invoice
+  internalNotes?: string      // Not shown on invoice
+  purchaseOrderNumber?: string
+
+  // Addresses (snapshot at invoice time)
+  billingAddress?: Address
+
+  // Cancellation
+  cancelledAt?: string
+  cancelledBy?: string
+  cancellationReason?: string
+
+  // Audit
+  createdAt: string
+  updatedAt: string
+  createdBy: string
+  sentAt?: string
+  sentBy?: string
 }
 
 export interface InvoiceLineItem {
@@ -153,6 +242,29 @@ export interface InvoiceLineItem {
   unitPrice: number
   totalPrice: number
   taskId?: string
+
+  // Per-line tax support (optional override)
+  taxCodeId?: string          // Can override invoice-level tax
+  taxRate?: number
+  taxAmount?: number
+
+  // Track source for unlinking on cancel
+  sourceType?: 'time_entry' | 'material'
+  sourceId?: string           // ID of the time entry or material
+}
+
+// Payment for tracking partial payments
+export interface Payment {
+  id: string
+  invoiceId: string
+  amount: number
+  currency: string
+  paymentDate: string
+  paymentMethod: PaymentMethod
+  reference?: string          // Check #, transaction ID
+  notes?: string
+  createdAt: string
+  createdBy: string
 }
 
 export interface PurchaseOrder {
@@ -241,6 +353,22 @@ export interface MaterialUsageFormData {
 export interface InvoiceFormData {
   serviceCallId: string
   customerId: string
+  currency: string
+  taxCodeId: string
   dueDate: string
+  paymentTerms: string
+  discountPercent?: number
+  notes?: string
+  purchaseOrderNumber?: string
   lineItems: Omit<InvoiceLineItem, 'id' | 'invoiceId'>[]
+}
+
+// Payment form data
+export interface PaymentFormData {
+  invoiceId: string
+  amount: number
+  paymentDate: string
+  paymentMethod: PaymentMethod
+  reference?: string
+  notes?: string
 }

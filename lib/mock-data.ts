@@ -12,6 +12,7 @@ import type {
   InvoiceLineItem,
   PurchaseOrder,
   POLineItem,
+  Payment,
 } from './types'
 
 // Reference Data
@@ -37,9 +38,55 @@ export const suppliers: Supplier[] = [
 ]
 
 export const customers: Customer[] = [
-  { id: 'CUST-001', name: 'Acme Corporation', email: 'contact@acme.com', phone: '555-1001' },
-  { id: 'CUST-002', name: 'TechStart Inc', email: 'hello@techstart.com', phone: '555-1002' },
-  { id: 'CUST-003', name: 'GlobalTrade LLC', email: 'info@globaltrade.com', phone: '555-1003' },
+  {
+    id: 'CUST-001',
+    name: 'Acme Corporation',
+    email: 'contact@acme.com',
+    phone: '555-1001',
+    defaultTaxCodeId: 'standard',
+    defaultCurrency: 'USD',
+    paymentTermsDays: 30,
+    billingAddress: {
+      line1: '123 Business Ave',
+      city: 'New York',
+      state: 'NY',
+      postalCode: '10001',
+      country: 'USA',
+    },
+  },
+  {
+    id: 'CUST-002',
+    name: 'TechStart Inc',
+    email: 'hello@techstart.com',
+    phone: '555-1002',
+    defaultTaxCodeId: 'standard',
+    defaultCurrency: 'USD',
+    paymentTermsDays: 15,
+    billingAddress: {
+      line1: '789 Innovation Dr',
+      city: 'San Francisco',
+      state: 'CA',
+      postalCode: '94102',
+      country: 'USA',
+    },
+  },
+  {
+    id: 'CUST-003',
+    name: 'GlobalTrade LLC',
+    email: 'info@globaltrade.com',
+    phone: '555-1003',
+    defaultTaxCodeId: 'reduced',
+    defaultCurrency: 'EUR',
+    paymentTermsDays: 45,
+    taxId: 'EU123456789',
+    billingAddress: {
+      line1: '321 Commerce St',
+      city: 'Chicago',
+      state: 'IL',
+      postalCode: '60601',
+      country: 'USA',
+    },
+  },
 ]
 
 // Service Calls
@@ -49,7 +96,7 @@ export const serviceCalls: ServiceCall[] = [
     title: 'Camera System Malfunction - Building A',
     description: 'Multiple cameras in Building A showing offline status. Client reports intermittent connectivity issues since yesterday. Need to diagnose and repair.',
     priority: 'high',
-    status: 'in_progress',
+    status: 'resolved',
     customerId: 'CUST-001',
     siteId: 'SITE-001',
     ownerId: 'EMP-001',
@@ -193,12 +240,13 @@ export const tasks: Task[] = [
     groupId: 'TG-003', // Repair Phase
     title: 'Replace faulty network switch',
     description: 'Replace the faulty 24-port switch identified during diagnosis.',
-    status: 'in_progress',
+    status: 'completed',
     ownerId: 'EMP-001',
     assignedEmployees: ['EMP-001', 'EMP-002'],
     estimatedHours: 3,
     sortOrder: 0,
     createdAt: '2024-12-10T12:30:00Z',
+    completedAt: '2024-12-10T16:00:00Z',
   },
   {
     id: 'TK-003',
@@ -254,6 +302,7 @@ export const timeEntries: TimeEntry[] = [
     rateType: 'regular',
     notes: 'Diagnosed network issues, identified faulty switch.',
     billable: true,
+    invoiced: false,
   },
   {
     id: 'TE-002',
@@ -264,6 +313,7 @@ export const timeEntries: TimeEntry[] = [
     rateType: 'regular',
     notes: 'Started switch replacement, waiting for parts.',
     billable: true,
+    invoiced: false,
   },
   {
     id: 'TE-003',
@@ -274,6 +324,7 @@ export const timeEntries: TimeEntry[] = [
     rateType: 'regular',
     notes: 'Assisted with cable management during switch prep.',
     billable: true,
+    invoiced: false,
   },
   {
     id: 'TE-004',
@@ -284,6 +335,9 @@ export const timeEntries: TimeEntry[] = [
     rateType: 'overtime',
     notes: 'Emergency inspection after hours.',
     billable: true,
+    invoiced: true,
+    invoiceId: 'INV-2024-001',
+    invoicedAt: '2024-12-09T12:00:00Z',
   },
   {
     id: 'TE-005',
@@ -294,6 +348,9 @@ export const timeEntries: TimeEntry[] = [
     rateType: 'regular',
     notes: 'Replaced filter and cleaned condenser.',
     billable: true,
+    invoiced: true,
+    invoiceId: 'INV-2024-001',
+    invoicedAt: '2024-12-09T12:00:00Z',
   },
   {
     id: 'TE-006',
@@ -304,6 +361,9 @@ export const timeEntries: TimeEntry[] = [
     rateType: 'regular',
     notes: 'Assisted with HVAC maintenance.',
     billable: true,
+    invoiced: true,
+    invoiceId: 'INV-2024-001',
+    invoicedAt: '2024-12-09T12:00:00Z',
   },
 ]
 
@@ -317,6 +377,7 @@ export const materialUsages: MaterialUsage[] = [
     unit: 'pcs',
     unitCost: 450,
     source: 'purchased',
+    invoiced: false,
   },
   {
     id: 'MU-002',
@@ -326,6 +387,7 @@ export const materialUsages: MaterialUsage[] = [
     unit: 'm',
     unitCost: 1.5,
     source: 'stock',
+    invoiced: false,
   },
   {
     id: 'MU-003',
@@ -335,6 +397,7 @@ export const materialUsages: MaterialUsage[] = [
     unit: 'pcs',
     unitCost: 0.5,
     source: 'stock',
+    invoiced: false,
   },
   {
     id: 'MU-004',
@@ -344,6 +407,9 @@ export const materialUsages: MaterialUsage[] = [
     unit: 'pcs',
     unitCost: 25,
     source: 'stock',
+    invoiced: true,
+    invoiceId: 'INV-2024-001',
+    invoicedAt: '2024-12-09T12:00:00Z',
   },
   {
     id: 'MU-005',
@@ -353,6 +419,9 @@ export const materialUsages: MaterialUsage[] = [
     unit: 'L',
     unitCost: 35,
     source: 'stock',
+    invoiced: true,
+    invoiceId: 'INV-2024-001',
+    invoicedAt: '2024-12-09T12:00:00Z',
   },
 ]
 
@@ -364,11 +433,45 @@ export const invoices: Invoice[] = [
     serviceCallId: 'SC-2024-003',
     customerId: 'CUST-003',
     status: 'sent',
-    subtotal: 306.25,
-    taxAmount: 27.56,
-    totalAmount: 333.81,
+
+    // Currency
+    currency: 'EUR',
+
+    // Tax
+    taxCodeId: 'reduced',
+    taxRate: 0.05,
+
+    // Amounts
+    subtotal: 358.75,
+    discountAmount: 0,
+    taxableAmount: 358.75,
+    taxAmount: 17.94,
+    totalAmount: 376.69,
+    amountPaid: 0,
+    amountDue: 376.69,
+
+    // Dates
     issuedDate: '2024-12-09',
     dueDate: '2024-12-24',
+
+    // Payment info
+    paymentTerms: 'Net 15',
+
+    // Addresses
+    billingAddress: {
+      line1: '321 Commerce St',
+      city: 'Chicago',
+      state: 'IL',
+      postalCode: '60601',
+      country: 'USA',
+    },
+
+    // Audit
+    createdAt: '2024-12-09T12:00:00Z',
+    updatedAt: '2024-12-09T12:00:00Z',
+    createdBy: 'EMP-002',
+    sentAt: '2024-12-09T14:00:00Z',
+    sentBy: 'EMP-002',
   },
 ]
 
@@ -389,19 +492,35 @@ export const invoiceLineItems: InvoiceLineItem[] = [
     unitPrice: 82.5,
     totalPrice: 123.75,
     taskId: 'TK-004',
+    sourceType: 'time_entry',
+    sourceId: 'TE-004',
   },
   {
     id: 'ILI-002',
     invoiceId: 'INV-2024-001',
     type: 'labor',
-    description: 'HVAC Maintenance - Filter Replacement',
-    quantity: 3,
-    unitPrice: 50,
-    totalPrice: 150,
+    description: 'HVAC Maintenance - Filter Replacement (EMP-002)',
+    quantity: 1.5,
+    unitPrice: 55,
+    totalPrice: 82.5,
     taskId: 'TK-005',
+    sourceType: 'time_entry',
+    sourceId: 'TE-005',
   },
   {
     id: 'ILI-003',
+    invoiceId: 'INV-2024-001',
+    type: 'labor',
+    description: 'HVAC Maintenance - Filter Replacement (EMP-003)',
+    quantity: 1.5,
+    unitPrice: 45,
+    totalPrice: 67.5,
+    taskId: 'TK-005',
+    sourceType: 'time_entry',
+    sourceId: 'TE-006',
+  },
+  {
+    id: 'ILI-004',
     invoiceId: 'INV-2024-001',
     type: 'material',
     description: 'HVAC Air Filter (20x25x1)',
@@ -409,9 +528,11 @@ export const invoiceLineItems: InvoiceLineItem[] = [
     unitPrice: 25,
     totalPrice: 50,
     taskId: 'TK-005',
+    sourceType: 'material',
+    sourceId: 'MU-004',
   },
   {
-    id: 'ILI-004',
+    id: 'ILI-005',
     invoiceId: 'INV-2024-001',
     type: 'material',
     description: 'Coil Cleaner Solution',
@@ -419,8 +540,13 @@ export const invoiceLineItems: InvoiceLineItem[] = [
     unitPrice: 35,
     totalPrice: 35,
     taskId: 'TK-005',
+    sourceType: 'material',
+    sourceId: 'MU-005',
   },
 ]
+
+// Payments
+export const payments: Payment[] = []
 
 // Helper functions to get related data
 export function getTasksForServiceCall(serviceCallId: string): Task[] {

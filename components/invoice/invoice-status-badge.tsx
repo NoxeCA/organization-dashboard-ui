@@ -10,6 +10,7 @@ export function InvoiceStatusBadge({ status }: InvoiceStatusBadgeProps) {
   const labels: Record<InvoiceStatus, string> = {
     draft: 'Draft',
     sent: 'Sent',
+    partially_paid: 'Partially Paid',
     paid: 'Paid',
     overdue: 'Overdue',
     cancelled: 'Cancelled',

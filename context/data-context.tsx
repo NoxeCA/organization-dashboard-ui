@@ -16,12 +16,15 @@ import type {
   Employee,
   Supplier,
   Customer,
+  Payment,
+  InvoiceStatus,
   ServiceCallFormData,
   TaskFormData,
   TaskGroupFormData,
   TimeEntryFormData,
   MaterialUsageFormData,
   POFormData,
+  PaymentFormData,
   ServiceCallStatus,
   TaskStatus,
 } from '@/lib/types'
@@ -35,13 +38,21 @@ import {
   poLineItems as initialPoLineItems,
   invoices as initialInvoices,
   invoiceLineItems as initialInvoiceLineItems,
+  payments as initialPayments,
   sites,
   employees,
   suppliers,
   customers,
 } from '@/lib/mock-data'
-import { DEFAULT_GROUP_COLOR } from '@/lib/constants'
-import { SERVICE_CALL_TRANSITIONS, TASK_TRANSITIONS } from '@/lib/constants'
+import {
+  DEFAULT_GROUP_COLOR,
+  SERVICE_CALL_TRANSITIONS,
+  TASK_TRANSITIONS,
+  INVOICE_TRANSITIONS,
+  getTaxCode,
+  DEFAULT_CURRENCY,
+  DEFAULT_TAX_CODE_ID,
+} from '@/lib/constants'
 
 interface DataContextType {
   // Reference data (read-only)
@@ -105,12 +116,27 @@ interface DataContextType {
   // Invoices
   invoices: Invoice[]
   invoiceLineItems: InvoiceLineItem[]
-  addInvoice: (serviceCallId: string, lineItems: Omit<InvoiceLineItem, 'id' | 'invoiceId'>[]) => Invoice
+  addInvoice: (
+    serviceCallId: string,
+    lineItems: Omit<InvoiceLineItem, 'id' | 'invoiceId'>[],
+    currency: string,
+    taxCodeId: string,
+    options?: { discountPercent?: number; notes?: string; purchaseOrderNumber?: string }
+  ) => Invoice
   updateInvoice: (id: string, data: Partial<Invoice>) => void
   deleteInvoice: (id: string) => void
+  cancelInvoice: (id: string, reason: string) => void
   getInvoice: (id: string) => Invoice | undefined
   getLineItemsForInvoice: (invoiceId: string) => InvoiceLineItem[]
   getInvoicesForServiceCall: (serviceCallId: string) => Invoice[]
+  hasUninvoicedItems: (serviceCallId: string) => boolean
+  getUninvoicedTotal: (serviceCallId: string) => number
+  checkOverdueInvoices: () => void
+
+  // Payments
+  payments: Payment[]
+  addPayment: (data: PaymentFormData) => Payment
+  getPaymentsForInvoice: (invoiceId: string) => Payment[]
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined)
@@ -130,6 +156,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [poLineItemsState, setPoLineItems] = useState<POLineItem[]>(initialPoLineItems)
   const [invoicesState, setInvoices] = useState<Invoice[]>(initialInvoices)
   const [invoiceLineItemsState, setInvoiceLineItems] = useState<InvoiceLineItem[]>(initialInvoiceLineItems)
+  const [paymentsState, setPayments] = useState<Payment[]>(initialPayments)
 
   // Helper function to get sites for a customer
   const getSitesForCustomer = useCallback(
@@ -438,6 +465,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       id: generateId('TE'),
       taskId,
       ...data,
+      invoiced: false, // New entries are not invoiced
     }
     setTimeEntries((prev) => [...prev, newEntry])
     return newEntry
@@ -475,6 +503,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       id: generateId('MU'),
       taskId,
       ...data,
+      invoiced: false, // New materials are not invoiced
     }
     setMaterialUsages((prev) => [...prev, newUsage])
     return newUsage
@@ -560,30 +589,81 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   // Invoice operations
   const addInvoice = useCallback(
-    (serviceCallId: string, lineItems: Omit<InvoiceLineItem, 'id' | 'invoiceId'>[]): Invoice => {
+    (
+      serviceCallId: string,
+      lineItems: Omit<InvoiceLineItem, 'id' | 'invoiceId'>[],
+      currency: string = DEFAULT_CURRENCY,
+      taxCodeId: string = DEFAULT_TAX_CODE_ID,
+      options?: { discountPercent?: number; notes?: string; purchaseOrderNumber?: string }
+    ): Invoice => {
       const invoiceId = generateId('INV')
       const invoiceNumber = `INV-${new Date().getFullYear()}-${String(invoicesState.length + 1).padStart(3, '0')}`
-
-      const subtotal = lineItems.reduce((sum, item) => sum + item.totalPrice, 0)
-      const taxAmount = subtotal * 0.09 // 9% tax
-      const totalAmount = subtotal + taxAmount
+      const now = new Date().toISOString()
 
       const serviceCall = serviceCallsState.find((sc) => sc.id === serviceCallId)
-      const site = sites.find((s) => s.id === serviceCall?.siteId)
+      const customer = customers.find((c) => c.id === serviceCall?.customerId)
+
+      // Get tax rate from tax code
+      const taxCode = getTaxCode(taxCodeId)
+      const taxRate = taxCode?.rate ?? 0.09
+
+      // Calculate amounts
+      const subtotal = lineItems.reduce((sum, item) => sum + item.totalPrice, 0)
+      const discountPercent = options?.discountPercent ?? 0
+      const discountAmount = subtotal * (discountPercent / 100)
+      const taxableAmount = subtotal - discountAmount
+      const taxAmount = taxableAmount * taxRate
+      const totalAmount = taxableAmount + taxAmount
+
+      // Calculate due date based on customer payment terms
+      const paymentTermsDays = customer?.paymentTermsDays ?? 30
+      const dueDate = new Date(Date.now() + paymentTermsDays * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
 
       const newInvoice: Invoice = {
         id: invoiceId,
         invoiceNumber,
         serviceCallId,
-        customerId: site?.customerId || '',
+        customerId: serviceCall?.customerId || '',
         status: 'draft',
+
+        // Currency
+        currency,
+
+        // Tax
+        taxCodeId,
+        taxRate,
+
+        // Amounts
         subtotal,
+        discountAmount,
+        discountPercent: options?.discountPercent,
+        taxableAmount,
         taxAmount,
         totalAmount,
+        amountPaid: 0,
+        amountDue: totalAmount,
+
+        // Dates
         issuedDate: new Date().toISOString().split('T')[0],
-        dueDate: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 15 days
+        dueDate,
+
+        // Payment info
+        paymentTerms: `Net ${paymentTermsDays}`,
+
+        // Additional info
+        notes: options?.notes,
+        purchaseOrderNumber: options?.purchaseOrderNumber,
+
+        // Addresses (snapshot)
+        billingAddress: customer?.billingAddress,
+
+        // Audit
+        createdAt: now,
+        updatedAt: now,
+        createdBy: 'EMP-001', // Default user
       }
 
+      // Create line items with source tracking
       const newLineItems: InvoiceLineItem[] = lineItems.map((item, index) => ({
         id: `${invoiceId}-LI-${index + 1}`,
         invoiceId,
@@ -593,12 +673,57 @@ export function DataProvider({ children }: { children: ReactNode }) {
       setInvoices((prev) => [...prev, newInvoice])
       setInvoiceLineItems((prev) => [...prev, ...newLineItems])
 
-      // Update service call status to invoiced
-      updateServiceCall(serviceCallId, { status: 'invoiced' })
+      // Mark time entries as invoiced
+      lineItems
+        .filter((item) => item.sourceType === 'time_entry' && item.sourceId)
+        .forEach((item) => {
+          setTimeEntries((prev) =>
+            prev.map((te) =>
+              te.id === item.sourceId
+                ? { ...te, invoiced: true, invoiceId, invoicedAt: now }
+                : te
+            )
+          )
+        })
+
+      // Mark materials as invoiced
+      lineItems
+        .filter((item) => item.sourceType === 'material' && item.sourceId)
+        .forEach((item) => {
+          setMaterialUsages((prev) =>
+            prev.map((mu) =>
+              mu.id === item.sourceId
+                ? { ...mu, invoiced: true, invoiceId, invoicedAt: now }
+                : mu
+            )
+          )
+        })
+
+      // Check if all items are now invoiced - if so, update service call status
+      const allTaskIds = tasksState
+        .filter((t) => t.serviceCallId === serviceCallId)
+        .map((t) => t.id)
+
+      const uninvoicedTimeEntries = timeEntriesState.filter(
+        (te) => allTaskIds.includes(te.taskId) && te.billable && !te.invoiced &&
+          !lineItems.some((li) => li.sourceId === te.id)
+      )
+      const uninvoicedMaterials = materialUsagesState.filter(
+        (mu) => allTaskIds.includes(mu.taskId) &&
+          mu.unitCost && mu.unitCost > 0 &&
+          mu.source !== 'customer_provided' &&
+          !mu.invoiced &&
+          !lineItems.some((li) => li.sourceId === mu.id)
+      )
+
+      // Only update to invoiced if no uninvoiced items remain
+      if (uninvoicedTimeEntries.length === 0 && uninvoicedMaterials.length === 0) {
+        updateServiceCall(serviceCallId, { status: 'invoiced' })
+      }
 
       return newInvoice
     },
-    [invoicesState.length, serviceCallsState, updateServiceCall]
+    [invoicesState.length, serviceCallsState, tasksState, timeEntriesState, materialUsagesState, updateServiceCall]
   )
 
   const updateInvoice = useCallback((id: string, data: Partial<Invoice>) => {
@@ -623,6 +748,212 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const getInvoicesForServiceCall = useCallback(
     (serviceCallId: string) => invoicesState.filter((inv) => inv.serviceCallId === serviceCallId),
     [invoicesState]
+  )
+
+  // Cancel invoice and unlink items for re-invoicing
+  const cancelInvoice = useCallback(
+    (id: string, reason: string) => {
+      const invoice = invoicesState.find((inv) => inv.id === id)
+      if (!invoice) return
+
+      // Can only cancel draft, sent, partially_paid, or overdue invoices
+      if (invoice.status === 'paid' || invoice.status === 'cancelled') {
+        toast.error(`Cannot cancel a ${invoice.status} invoice`)
+        return
+      }
+
+      const now = new Date().toISOString()
+      const lineItems = invoiceLineItemsState.filter((li) => li.invoiceId === id)
+
+      // Unlink time entries (make them available for re-invoicing)
+      lineItems
+        .filter((item) => item.sourceType === 'time_entry' && item.sourceId)
+        .forEach((item) => {
+          setTimeEntries((prev) =>
+            prev.map((te) =>
+              te.id === item.sourceId
+                ? { ...te, invoiced: false, invoiceId: undefined, invoicedAt: undefined }
+                : te
+            )
+          )
+        })
+
+      // Unlink materials
+      lineItems
+        .filter((item) => item.sourceType === 'material' && item.sourceId)
+        .forEach((item) => {
+          setMaterialUsages((prev) =>
+            prev.map((mu) =>
+              mu.id === item.sourceId
+                ? { ...mu, invoiced: false, invoiceId: undefined, invoicedAt: undefined }
+                : mu
+            )
+          )
+        })
+
+      // Update invoice status
+      setInvoices((prev) =>
+        prev.map((inv) =>
+          inv.id === id
+            ? {
+                ...inv,
+                status: 'cancelled' as InvoiceStatus,
+                cancelledAt: now,
+                cancelledBy: 'EMP-001', // Default user
+                cancellationReason: reason,
+                updatedAt: now,
+              }
+            : inv
+        )
+      )
+
+      toast.success('Invoice cancelled. Items are available for re-invoicing.')
+    },
+    [invoicesState, invoiceLineItemsState]
+  )
+
+  // Check if service call has uninvoiced items
+  const hasUninvoicedItems = useCallback(
+    (serviceCallId: string): boolean => {
+      const taskIds = tasksState
+        .filter((t) => t.serviceCallId === serviceCallId && t.status === 'completed')
+        .map((t) => t.id)
+
+      const uninvoicedTimeEntries = timeEntriesState.filter(
+        (te) => taskIds.includes(te.taskId) && te.billable && !te.invoiced
+      )
+      const uninvoicedMaterials = materialUsagesState.filter(
+        (mu) =>
+          taskIds.includes(mu.taskId) &&
+          mu.unitCost &&
+          mu.unitCost > 0 &&
+          mu.source !== 'customer_provided' &&
+          !mu.invoiced
+      )
+
+      return uninvoicedTimeEntries.length > 0 || uninvoicedMaterials.length > 0
+    },
+    [tasksState, timeEntriesState, materialUsagesState]
+  )
+
+  // Get total uninvoiced amount for a service call
+  const getUninvoicedTotal = useCallback(
+    (serviceCallId: string): number => {
+      const taskIds = tasksState
+        .filter((t) => t.serviceCallId === serviceCallId && t.status === 'completed')
+        .map((t) => t.id)
+
+      // Calculate labor total
+      const laborTotal = timeEntriesState
+        .filter((te) => taskIds.includes(te.taskId) && te.billable && !te.invoiced)
+        .reduce((sum, te) => {
+          const employee = employees.find((e) => e.id === te.employeeId)
+          const rate = employee?.hourlyRate ?? 0
+          // Simple calculation without rate multipliers for now
+          return sum + te.hours * rate
+        }, 0)
+
+      // Calculate material total
+      const materialTotal = materialUsagesState
+        .filter(
+          (mu) =>
+            taskIds.includes(mu.taskId) &&
+            mu.unitCost &&
+            mu.unitCost > 0 &&
+            mu.source !== 'customer_provided' &&
+            !mu.invoiced
+        )
+        .reduce((sum, mu) => sum + mu.quantity * (mu.unitCost ?? 0), 0)
+
+      return laborTotal + materialTotal
+    },
+    [tasksState, timeEntriesState, materialUsagesState]
+  )
+
+  // Check and update overdue invoices
+  const checkOverdueInvoices = useCallback(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    setInvoices((prev) =>
+      prev.map((inv) => {
+        if (
+          (inv.status === 'sent' || inv.status === 'partially_paid') &&
+          new Date(inv.dueDate) < today
+        ) {
+          return { ...inv, status: 'overdue' as InvoiceStatus, updatedAt: new Date().toISOString() }
+        }
+        return inv
+      })
+    )
+  }, [])
+
+  // Payment operations
+  const addPayment = useCallback(
+    (data: PaymentFormData): Payment => {
+      const invoice = invoicesState.find((inv) => inv.id === data.invoiceId)
+      if (!invoice) {
+        throw new Error('Invoice not found')
+      }
+
+      const now = new Date().toISOString()
+      const newPayment: Payment = {
+        id: generateId('PAY'),
+        invoiceId: data.invoiceId,
+        amount: data.amount,
+        currency: invoice.currency,
+        paymentDate: data.paymentDate,
+        paymentMethod: data.paymentMethod,
+        reference: data.reference,
+        notes: data.notes,
+        createdAt: now,
+        createdBy: 'EMP-001', // Default user
+      }
+
+      setPayments((prev) => [...prev, newPayment])
+
+      // Update invoice amounts and status
+      const newAmountPaid = invoice.amountPaid + data.amount
+      const newAmountDue = Math.max(0, invoice.totalAmount - newAmountPaid)
+
+      let newStatus: InvoiceStatus = invoice.status
+      if (newAmountDue <= 0) {
+        newStatus = 'paid'
+      } else if (newAmountPaid > 0 && invoice.status !== 'overdue') {
+        newStatus = 'partially_paid'
+      }
+
+      setInvoices((prev) =>
+        prev.map((inv) =>
+          inv.id === data.invoiceId
+            ? {
+                ...inv,
+                amountPaid: newAmountPaid,
+                amountDue: newAmountDue,
+                status: newStatus,
+                paidDate: newAmountDue <= 0 ? data.paymentDate : undefined,
+                paymentMethod: data.paymentMethod,
+                paymentReference: data.reference,
+                updatedAt: now,
+              }
+            : inv
+        )
+      )
+
+      toast.success(
+        newAmountDue <= 0
+          ? 'Payment recorded. Invoice marked as paid.'
+          : `Payment of ${data.amount} recorded. ${newAmountDue.toFixed(2)} remaining.`
+      )
+
+      return newPayment
+    },
+    [invoicesState]
+  )
+
+  const getPaymentsForInvoice = useCallback(
+    (invoiceId: string) => paymentsState.filter((p) => p.invoiceId === invoiceId),
+    [paymentsState]
   )
 
   const value: DataContextType = {
@@ -690,9 +1021,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
     addInvoice,
     updateInvoice,
     deleteInvoice,
+    cancelInvoice,
     getInvoice,
     getLineItemsForInvoice,
     getInvoicesForServiceCall,
+    hasUninvoicedItems,
+    getUninvoicedTotal,
+    checkOverdueInvoices,
+
+    // Payments
+    payments: paymentsState,
+    addPayment,
+    getPaymentsForInvoice,
   }
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>
