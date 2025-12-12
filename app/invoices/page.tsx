@@ -22,9 +22,11 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { InvoiceStatusBadge } from '@/components/invoice/invoice-status-badge'
+import { InvoiceAgingChart } from '@/components/invoice/invoice-aging-chart'
+import { PendingInvoiceServiceCalls } from '@/components/invoice/pending-invoice-service-calls'
 import { useData } from '@/context/data-context'
 import { formatCurrency, formatDate, INVOICE_STATUS_OPTIONS } from '@/lib/constants'
-import { Eye, DollarSign, AlertTriangle, CheckCircle, FileText } from 'lucide-react'
+import { Eye, DollarSign, AlertTriangle, CheckCircle, FileText, TrendingUp, Clock } from 'lucide-react'
 import type { InvoiceStatus } from '@/lib/types'
 
 export default function InvoicesPage() {
@@ -172,6 +174,12 @@ export default function InvoicesPage() {
                 </p>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Invoice Aging & Pending Service Calls */}
+          <div className="grid gap-6 lg:grid-cols-2">
+            <InvoiceAgingChart />
+            <PendingInvoiceServiceCalls limit={5} />
           </div>
 
           {/* Filters */}

@@ -48,13 +48,15 @@ import {
   ArrowUpDown,
   Sparkles,
   TrendingUp,
+  Receipt,
+  DollarSign,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ServiceCallStatus, ServiceCallPriority } from '@/lib/types'
 
 export default function ServiceCallsPage() {
   const router = useRouter()
-  const { serviceCalls, sites, getTasksForServiceCall } = useData()
+  const { serviceCalls, sites, getTasksForServiceCall, getInvoiceProgress } = useData()
 
   const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<ServiceCallStatus | 'all'>('all')
@@ -344,11 +346,12 @@ export default function ServiceCallsPage() {
                 <TableHeader>
                   <TableRow className="bg-muted/50 hover:bg-muted/50">
                     <TableHead className="w-[140px] font-semibold">ID</TableHead>
-                    <TableHead className="min-w-[280px] font-semibold">Service Call</TableHead>
+                    <TableHead className="min-w-[250px] font-semibold">Service Call</TableHead>
                     <TableHead className="font-semibold">Site</TableHead>
                     <TableHead className="font-semibold">Priority</TableHead>
                     <TableHead className="font-semibold">Status</TableHead>
-                    <TableHead className="font-semibold">Progress</TableHead>
+                    <TableHead className="font-semibold">Tasks</TableHead>
+                    <TableHead className="font-semibold">Invoicing</TableHead>
                     <TableHead className="font-semibold">Created</TableHead>
                     <TableHead className="w-[70px]"></TableHead>
                   </TableRow>
@@ -356,7 +359,7 @@ export default function ServiceCallsPage() {
                 <TableBody>
                   {filteredServiceCalls.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={8} className="h-[400px]">
+                      <TableCell colSpan={9} className="h-[400px]">
                         <div className="flex flex-col items-center justify-center gap-4">
                           <div className="relative">
                             <div className="absolute inset-0 animate-pulse rounded-full bg-primary/20" />
@@ -389,7 +392,10 @@ export default function ServiceCallsPage() {
                     </TableRow>
                   ) : (
                     filteredServiceCalls.map((sc) => {
-                      const progress = getTaskProgress(sc.id)
+                      const taskProgress = getTaskProgress(sc.id)
+                      const invoiceProgressData = ['resolved', 'invoiced', 'closed'].includes(sc.status)
+                        ? getInvoiceProgress(sc.id)
+                        : null
                       return (
                         <TableRow
                           key={sc.id}
@@ -406,7 +412,7 @@ export default function ServiceCallsPage() {
                               <div className="font-medium group-hover:text-primary transition-colors">
                                 {sc.title}
                               </div>
-                              <div className="text-sm text-muted-foreground line-clamp-1 max-w-[300px]">
+                              <div className="text-sm text-muted-foreground line-clamp-1 max-w-[250px]">
                                 {sc.description}
                               </div>
                             </div>
@@ -421,29 +427,64 @@ export default function ServiceCallsPage() {
                             <StatusBadge status={sc.status} />
                           </TableCell>
                           <TableCell>
-                            {progress ? (
+                            {taskProgress ? (
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <div className="flex items-center gap-2">
-                                    <div className="h-2 w-16 rounded-full bg-muted overflow-hidden">
+                                    <div className="h-2 w-12 rounded-full bg-muted overflow-hidden">
                                       <div
                                         className="h-full bg-primary transition-all"
                                         style={{
-                                          width: `${(progress.completed / progress.total) * 100}%`,
+                                          width: `${(taskProgress.completed / taskProgress.total) * 100}%`,
                                         }}
                                       />
                                     </div>
                                     <span className="text-xs text-muted-foreground">
-                                      {progress.completed}/{progress.total}
+                                      {taskProgress.completed}/{taskProgress.total}
                                     </span>
                                   </div>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  {progress.completed} of {progress.total} tasks completed
+                                  {taskProgress.completed} of {taskProgress.total} tasks completed
                                 </TooltipContent>
                               </Tooltip>
                             ) : (
-                              <span className="text-xs text-muted-foreground">No tasks</span>
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {invoiceProgressData ? (
+                              invoiceProgressData.totalAmount > 0 ? (
+                                invoiceProgressData.hasUninvoicedItems ? (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700 gap-1">
+                                        <DollarSign className="h-3 w-3" />
+                                        Pending
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      {invoiceProgressData.progressPercent}% invoiced
+                                    </TooltipContent>
+                                  </Tooltip>
+                                ) : (
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700 gap-1">
+                                        <CheckCircle2 className="h-3 w-3" />
+                                        Complete
+                                      </Badge>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      Fully invoiced
+                                    </TooltipContent>
+                                  </Tooltip>
+                                )
+                              ) : (
+                                <span className="text-xs text-muted-foreground">No billable items</span>
+                              )
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
                             )}
                           </TableCell>
                           <TableCell>

@@ -36,6 +36,8 @@ import { StatusBadge, PriorityBadge } from '@/components/service-call/status-bad
 import { OwnerSelector } from '@/components/service-call/owner-selector'
 import { TaskGroupSection } from '@/components/task-group/task-group-section'
 import { InvoiceGenerator } from '@/components/invoice/invoice-generator'
+import { InvoiceProgressCard, InvoiceProgressAlert } from '@/components/invoice/invoice-progress-card'
+import { UninvoicedItemsList } from '@/components/invoice/uninvoiced-items-list'
 import { useData } from '@/context/data-context'
 import {
   SERVICE_CALL_STATUS_OPTIONS,
@@ -92,6 +94,7 @@ export default function ServiceCallDetailPage() {
     timeEntries,
     materialUsages,
     getInvoicesForServiceCall,
+    getInvoiceProgress,
   } = useData()
 
   const serviceCall = getServiceCall(id)
@@ -161,6 +164,9 @@ export default function ServiceCallDetailPage() {
 
   // Calculate total invoiced amount
   const totalInvoicedAmount = serviceInvoices.reduce((sum, inv) => sum + inv.totalAmount, 0)
+
+  // Get invoice progress data
+  const invoiceProgress = serviceCall ? getInvoiceProgress(serviceCall.id) : null
 
   // Status flow visualization
   const statusFlow: ServiceCallStatus[] = ['open', 'in_progress', 'resolved', 'invoiced', 'closed']
@@ -344,16 +350,20 @@ export default function ServiceCallDetailPage() {
                </CardContent>
              </Card>
 
-             <Card className="shadow-sm">
-               <CardContent className="p-4 flex flex-col gap-1">
-                 <span className="text-xs font-medium text-muted-foreground uppercase">Invoiced</span>
-                 <div className="flex items-end justify-between">
-                   <span className="text-2xl font-bold">{formatCurrency(totalInvoicedAmount)}</span>
-                   <span className="text-xs text-muted-foreground mb-1">{serviceInvoices.length} inv.</span>
-                 </div>
-                  <div className="w-full h-1 bg-muted rounded-full mt-2" />
-               </CardContent>
-             </Card>
+             {invoiceProgress && invoiceProgress.totalAmount > 0 ? (
+               <InvoiceProgressCard serviceCallId={serviceCall.id} compact />
+             ) : (
+               <Card className="shadow-sm">
+                 <CardContent className="p-4 flex flex-col gap-1">
+                   <span className="text-xs font-medium text-muted-foreground uppercase">Invoiced</span>
+                   <div className="flex items-end justify-between">
+                     <span className="text-2xl font-bold">{formatCurrency(totalInvoicedAmount)}</span>
+                     <span className="text-xs text-muted-foreground mb-1">{serviceInvoices.length} inv.</span>
+                   </div>
+                   <div className="w-full h-1 bg-muted rounded-full mt-2" />
+                 </CardContent>
+               </Card>
+             )}
           </div>
 
           {/* Tabs Section */}
@@ -377,16 +387,20 @@ export default function ServiceCallDetailPage() {
                 >
                   Time & Materials
                 </TabsTrigger>
-                <TabsTrigger 
-                  value="invoices" 
+                <TabsTrigger
+                  value="invoices"
                   className="rounded-none border-b-2 border-transparent px-0 py-2 font-medium text-muted-foreground hover:text-foreground data-[state=active]:border-primary data-[state=active]:text-foreground bg-transparent shadow-none"
                 >
                   Invoices
-                  {serviceInvoices.length > 0 && (
+                  {invoiceProgress?.hasUninvoicedItems ? (
+                    <span className="ml-2 rounded-full bg-amber-100 dark:bg-amber-900/50 px-2 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+                      Pending
+                    </span>
+                  ) : serviceInvoices.length > 0 ? (
                     <span className="ml-2 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-foreground">
                       {serviceInvoices.length}
                     </span>
-                  )}
+                  ) : null}
                 </TabsTrigger>
                 <TabsTrigger 
                   value="details" 
@@ -598,7 +612,18 @@ export default function ServiceCallDetailPage() {
               </Card>
             </TabsContent>
 
-            <TabsContent value="invoices" className="mt-4">
+            <TabsContent value="invoices" className="mt-4 space-y-4">
+              {/* Invoice Progress Summary */}
+              {invoiceProgress && invoiceProgress.totalAmount > 0 && (
+                <InvoiceProgressCard serviceCallId={serviceCall.id} />
+              )}
+
+              {/* Uninvoiced Items Alert & List */}
+              {invoiceProgress?.hasUninvoicedItems && (
+                <UninvoicedItemsList serviceCallId={serviceCall.id} />
+              )}
+
+              {/* Invoices List */}
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between pb-3 pt-4">
                   <div>
@@ -617,7 +642,9 @@ export default function ServiceCallDetailPage() {
                       </div>
                       <h3 className="text-sm font-semibold">No invoices yet</h3>
                       <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
-                        Generate an invoice when ready to bill
+                        {invoiceProgress?.hasUninvoicedItems
+                          ? 'You have pending items ready to be invoiced'
+                          : 'Generate an invoice when ready to bill'}
                       </p>
                     </div>
                   ) : (

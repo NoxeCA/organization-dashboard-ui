@@ -52,7 +52,51 @@ import {
   getTaxCode,
   DEFAULT_CURRENCY,
   DEFAULT_TAX_CODE_ID,
+  RATE_MULTIPLIERS,
 } from '@/lib/constants'
+
+// Invoice progress tracking types
+export interface InvoiceProgressData {
+  // Counts
+  totalLaborItems: number
+  invoicedLaborItems: number
+  totalMaterialItems: number
+  invoicedMaterialItems: number
+  // Amounts
+  totalLaborAmount: number
+  invoicedLaborAmount: number
+  uninvoicedLaborAmount: number
+  totalMaterialAmount: number
+  invoicedMaterialAmount: number
+  uninvoicedMaterialAmount: number
+  // Combined
+  totalAmount: number
+  invoicedAmount: number
+  uninvoicedAmount: number
+  // Progress percentage
+  progressPercent: number
+  // Status
+  hasUninvoicedItems: boolean
+  isFullyInvoiced: boolean
+  // Uninvoiced items for display
+  uninvoicedTimeEntries: Array<{
+    id: string
+    taskTitle: string
+    employeeName: string
+    hours: number
+    amount: number
+    date: string
+    rateType: string
+  }>
+  uninvoicedMaterials: Array<{
+    id: string
+    taskTitle: string
+    materialName: string
+    quantity: number
+    unit: string
+    amount: number
+  }>
+}
 
 interface DataContextType {
   // Reference data (read-only)
@@ -132,6 +176,8 @@ interface DataContextType {
   hasUninvoicedItems: (serviceCallId: string) => boolean
   getUninvoicedTotal: (serviceCallId: string) => number
   checkOverdueInvoices: () => void
+  getInvoiceProgress: (serviceCallId: string) => InvoiceProgressData
+  getServiceCallsWithUninvoicedItems: () => Array<{ serviceCall: ServiceCall; progress: InvoiceProgressData }>
 
   // Payments
   payments: Payment[]
@@ -888,6 +934,132 @@ export function DataProvider({ children }: { children: ReactNode }) {
     )
   }, [])
 
+  // Get comprehensive invoice progress for a service call
+  const getInvoiceProgress = useCallback(
+    (serviceCallId: string): InvoiceProgressData => {
+      // Get all completed tasks for this service call
+      const completedTasks = tasksState.filter(
+        (t) => t.serviceCallId === serviceCallId && t.status === 'completed'
+      )
+      const taskIds = completedTasks.map((t) => t.id)
+      const taskMap = new Map(completedTasks.map((t) => [t.id, t]))
+
+      // Get all billable time entries for these tasks
+      const billableTimeEntries = timeEntriesState.filter(
+        (te) => taskIds.includes(te.taskId) && te.billable
+      )
+
+      // Get all billable materials for these tasks
+      const billableMaterials = materialUsagesState.filter(
+        (mu) =>
+          taskIds.includes(mu.taskId) &&
+          mu.unitCost &&
+          mu.unitCost > 0 &&
+          mu.source !== 'customer_provided'
+      )
+
+      // Calculate labor amounts
+      let totalLaborAmount = 0
+      let invoicedLaborAmount = 0
+      const uninvoicedTimeEntries: InvoiceProgressData['uninvoicedTimeEntries'] = []
+
+      billableTimeEntries.forEach((te) => {
+        const employee = employees.find((e) => e.id === te.employeeId)
+        const rateMultiplier = RATE_MULTIPLIERS[te.rateType] || 1
+        const amount = te.hours * (employee?.hourlyRate ?? 0) * rateMultiplier
+        totalLaborAmount += amount
+
+        if (te.invoiced) {
+          invoicedLaborAmount += amount
+        } else {
+          const task = taskMap.get(te.taskId)
+          uninvoicedTimeEntries.push({
+            id: te.id,
+            taskTitle: task?.title || 'Unknown Task',
+            employeeName: employee?.name || 'Unknown',
+            hours: te.hours,
+            amount,
+            date: te.date,
+            rateType: te.rateType,
+          })
+        }
+      })
+
+      // Calculate material amounts
+      let totalMaterialAmount = 0
+      let invoicedMaterialAmount = 0
+      const uninvoicedMaterials: InvoiceProgressData['uninvoicedMaterials'] = []
+
+      billableMaterials.forEach((mu) => {
+        const amount = mu.quantity * (mu.unitCost ?? 0)
+        totalMaterialAmount += amount
+
+        if (mu.invoiced) {
+          invoicedMaterialAmount += amount
+        } else {
+          const task = taskMap.get(mu.taskId)
+          uninvoicedMaterials.push({
+            id: mu.id,
+            taskTitle: task?.title || 'Unknown Task',
+            materialName: mu.materialName,
+            quantity: mu.quantity,
+            unit: mu.unit,
+            amount,
+          })
+        }
+      })
+
+      // Combined totals
+      const totalAmount = totalLaborAmount + totalMaterialAmount
+      const invoicedAmount = invoicedLaborAmount + invoicedMaterialAmount
+      const uninvoicedAmount = totalAmount - invoicedAmount
+
+      // Progress percentage
+      const progressPercent = totalAmount > 0 ? Math.round((invoicedAmount / totalAmount) * 100) : 100
+
+      return {
+        // Counts
+        totalLaborItems: billableTimeEntries.length,
+        invoicedLaborItems: billableTimeEntries.filter((te) => te.invoiced).length,
+        totalMaterialItems: billableMaterials.length,
+        invoicedMaterialItems: billableMaterials.filter((mu) => mu.invoiced).length,
+        // Labor amounts
+        totalLaborAmount,
+        invoicedLaborAmount,
+        uninvoicedLaborAmount: totalLaborAmount - invoicedLaborAmount,
+        // Material amounts
+        totalMaterialAmount,
+        invoicedMaterialAmount,
+        uninvoicedMaterialAmount: totalMaterialAmount - invoicedMaterialAmount,
+        // Combined
+        totalAmount,
+        invoicedAmount,
+        uninvoicedAmount,
+        // Progress
+        progressPercent,
+        // Status flags
+        hasUninvoicedItems: uninvoicedTimeEntries.length > 0 || uninvoicedMaterials.length > 0,
+        isFullyInvoiced: uninvoicedTimeEntries.length === 0 && uninvoicedMaterials.length === 0 && totalAmount > 0,
+        // Uninvoiced item details
+        uninvoicedTimeEntries,
+        uninvoicedMaterials,
+      }
+    },
+    [tasksState, timeEntriesState, materialUsagesState]
+  )
+
+  // Get all service calls that have uninvoiced items
+  const getServiceCallsWithUninvoicedItems = useCallback(() => {
+    return serviceCallsState
+      .filter((sc) => ['resolved', 'invoiced'].includes(sc.status))
+      .map((sc) => ({
+        serviceCall: sc,
+        progress: getInvoiceProgress(sc.id),
+      }))
+      .filter((item) => item.progress.hasUninvoicedItems)
+      .sort((a, b) => b.progress.uninvoicedAmount - a.progress.uninvoicedAmount)
+  }, [serviceCallsState, getInvoiceProgress])
+
   // Payment operations
   const addPayment = useCallback(
     (data: PaymentFormData): Payment => {
@@ -1028,6 +1200,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
     hasUninvoicedItems,
     getUninvoicedTotal,
     checkOverdueInvoices,
+    getInvoiceProgress,
+    getServiceCallsWithUninvoicedItems,
 
     // Payments
     payments: paymentsState,
